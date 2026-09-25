@@ -8,11 +8,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentView: "landing", // landing, dashboard, map, predictions, alerts, precautions, eoc, mysafety, analytics, fusion, about
     selectedLocationId: "chennai",
     selectedHazard: "THUNDERSTORM",
+    apiData: {
+  systemStatus: null,
+  currentRisk: null,
+  forecast: null,
+  storms: null,
+  alerts: null
+},
     selectedTimelineHourIndex: 0,
     activeMapLayer: "radar",
     map: null,
     radarOverlay: null,
-    riskPolygons: [],
+stormTrajectoryLine: null,
+stormTrajectoryMarkers: [],
+riskPolygons: [],
     stormSimulationActive: false,
     stormSimulationInterval: null,
     countdownSeconds: 5076, // 01:24:36
@@ -47,13 +56,40 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Navigation Setup
   setupNavigation();
 
-  // Load Data & Initial Setup
-  const locations = await window.alertoraAPI.getLocations();
-  populateLocationSelector(locations);
-  startCountdownTimer();
-  renderNotificationDropdown();
-  startHeaderClock();
-  initMySafetyEventListeners();
+ // Load Data & Initial Setup
+const locations = await window.alertoraAPI.getLocations();
+
+try {
+  const [
+    systemStatus,
+    currentRisk,
+    forecast,
+    storms,
+    alerts
+  ] = await Promise.all([
+    window.alertoraAPI.getSystemStatus(),
+    window.alertoraAPI.getCurrentRisk(),
+    window.alertoraAPI.getForecast(),
+    window.alertoraAPI.getStorms(),
+    window.alertoraAPI.getAlerts()
+  ]);
+
+  state.apiData.systemStatus = systemStatus;
+  state.apiData.currentRisk = currentRisk;
+  state.apiData.forecast = forecast;
+  state.apiData.storms = storms;
+  state.apiData.alerts = alerts;
+
+  console.log("[ALERTORA] FastAPI product data loaded:", state.apiData);
+} catch (error) {
+  console.error("[ALERTORA] Failed to load FastAPI product data:", error);
+}
+
+populateLocationSelector(locations);
+startCountdownTimer();
+renderNotificationDropdown();
+startHeaderClock();
+initMySafetyEventListeners();
 
   // Button Listeners
   document.getElementById("btn-launch-dashboard").addEventListener("click", () => switchView("dashboard"));
@@ -410,8 +446,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       windSpeed: Math.floor(28 + seed * 22),
       pressure: 1003.8,
       rainfallRate: Math.floor(35 + seed * 45),
-      nextHazardETA: "00h 35m",
-      nextHazardType: "Convective Cell & Rain",
+      nextHazardETA: null,
+nextHazardType: "Forecast warning",
       nowcast: [
         { hour: "NOW", time: "NOW", thunderstorm: thunderstormProb, hail: hailProb, cloudburst: cloudburstProb, lightning: lightningProb, rainfall: Math.floor(35 + seed * 45), wind: Math.floor(28 + seed * 22) },
         { hour: "+1 HR", time: "+1H", thunderstorm: Math.min(100, thunderstormProb + 8), hail: Math.min(100, hailProb + 12), cloudburst: Math.min(100, cloudburstProb + 10), lightning: Math.min(100, lightningProb + 6), rainfall: Math.floor(55 + seed * 45), wind: Math.floor(38 + seed * 22) },
@@ -438,6 +474,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.getElementById("countdown-location").textContent = `⌖ ${gpsLoc.placeName} (${gpsLoc.lat.toFixed(4)}° N, ${gpsLoc.lng.toFixed(4)}° E)`;
     document.getElementById("countdown-hazard-type").textContent = gpsLoc.nextHazardType;
+
+
+    const countdownRiskBadge = document.getElementById("countdown-risk-badge");
+
+if (countdownRiskBadge) {
+  countdownRiskBadge.textContent = `${loc.currentRisk} RISK`;
+}
 
     // Show GPS status badge and coordinates display
     const statusBadge = document.getElementById("gps-status-badge");
@@ -522,8 +565,46 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Update UI Elements with Selected Location Data
-  function updateDashboardForLocation(locId) {
-    const loc = ALERTORA_DATA.locations.find(l => l.id === locId) || ALERTORA_DATA.locations[0];
+function updateDashboardForLocation(locId) {
+  const baseLoc =
+    ALERTORA_DATA.locations.find(l => l.id === locId) ||
+    ALERTORA_DATA.locations[0];
+
+  const risk = state.apiData.currentRisk;
+  const forecast = state.apiData.forecast;
+  const alerts = state.apiData?.alerts?.alerts || [];
+const activeAlert = alerts[0] || null;
+
+  // Keep the existing UI structure, but override
+  // risk/forecast values with FastAPI fixture data.
+  const loc = {
+    ...baseLoc,
+
+    currentRisk:
+      risk?.risk_level || baseLoc.currentRisk,
+
+      nextHazardETA: activeAlert?.eta || null,
+nextHazardType: activeAlert?.title || "Forecast warning",
+
+    nowcast: forecast?.points
+      ? forecast.points.map((point) => ({
+          time: point.time,
+          hour: point.time,
+
+          thunderstorm: point.thunderstorm_probability ?? 0,
+          rainfall: point.heavy_rain_probability ?? 0,
+          
+
+          // Temporary compatibility fields.
+          // These will be replaced when the real hazard
+          // outputs are supplied.
+          hail: 0,
+          cloudburst: 0,
+          lightning: 0,
+          wind: baseLoc.windSpeed ?? 0
+        }))
+      : baseLoc.nowcast
+  };
 
     // Current metrics
     document.getElementById("location-name-display").textContent = loc.name;
@@ -537,10 +618,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     riskBadge.textContent = loc.currentRisk;
     riskBadge.className = `px-3 py-1 rounded-full text-xs font-bold font-mono uppercase border ${getRiskBadgeClass(loc.currentRisk)}`;
 
-    // ETA & Next Event
-    document.getElementById("countdown-location").textContent = loc.name;
-    document.getElementById("countdown-hazard-type").textContent = loc.nextHazardType;
-
+   
     // Render AI Nowcast Timeline
     renderNowcastTimeline(loc.nowcast);
 
@@ -753,67 +831,130 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Render Map Overlays & Risk Polygons
-  function renderMapOverlays() {
+ function renderMapOverlays() {
     if (!state.map) return;
 
-    // Simulated Storm Radar Circle Overlay
-    state.radarOverlay = L.circle([13.12, 80.18], {
+    // ============================================================
+    // FastAPI Storm Data
+    // ============================================================
+
+    // Remove previous trajectory if the map is refreshed
+    if (state.stormTrajectoryLine) {
+      state.map.removeLayer(state.stormTrajectoryLine);
+      state.stormTrajectoryLine = null;
+    }
+
+    state.stormTrajectoryMarkers.forEach(marker => {
+      state.map.removeLayer(marker);
+    });
+
+    state.stormTrajectoryMarkers = [];
+
+    // Read storm data supplied by FastAPI
+    const storm = state.apiData?.storms?.storms?.[0] || null;
+
+    // Current storm position
+    const currentPosition = storm?.current_position || {
+      latitude: 13.12,
+      longitude: 80.18
+    };
+
+    const stormLat = currentPosition.latitude;
+    const stormLng = currentPosition.longitude;
+
+    // ============================================================
+    // Current Storm / Risk Area
+    // ============================================================
+
+    state.radarOverlay = L.circle([stormLat, stormLng], {
       color: "#ef4444",
       fillColor: "#ef4444",
       fillOpacity: 0.35,
       radius: 28000
     }).addTo(state.map);
-    state.radarOverlay.bindTooltip("<b>Storm Core Active</b><br>Reflectivity: 54.2 dBZ", { permanent: false, direction: "top" });
 
-    // Secondary Moderate Risk Polygon
-    const polygon = L.polygon([
-      [13.25, 79.85],
-      [13.40, 80.15],
-      [13.10, 80.35],
-      [12.90, 80.05]
-    ], {
-      color: "#f97316",
-      fillColor: "#f97316",
-      fillOpacity: 0.2
-    }).addTo(state.map);
-    polygon.bindTooltip("<b>High Convective Risk Zone</b><br>0-6 Hr Forecast Area", { permanent: false });
+    state.radarOverlay.bindTooltip(
+      "<b>Storm Core Active</b><br>Development fixture",
+      {
+        permanent: false,
+        direction: "top"
+      }
+    );
 
-    // Markers for all Tamil Nadu locations
-    ALERTORA_DATA.locations.forEach(loc => {
-      const markerColor = loc.currentRisk === "EXTREME" ? "#ef4444" : (loc.currentRisk === "HIGH" ? "#f97316" : "#f59e0b");
-      
-      const customIcon = L.divIcon({
-        className: 'custom-map-pin',
-        html: `<div style="background-color:${markerColor}; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px ${markerColor}"></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
+    // ============================================================
+    // Storm Forecast Trajectory
+    // ============================================================
+
+    if (storm?.trajectory?.length) {
+
+      const trajectoryPoints = [
+        [stormLat, stormLng],
+        ...storm.trajectory.map(point => [
+          point.latitude,
+          point.longitude
+        ])
+      ];
+
+      // Draw predicted path
+      state.stormTrajectoryLine = L.polyline(
+        trajectoryPoints,
+        {
+          color: "#f97316",
+          weight: 4,
+          opacity: 0.85,
+          dashArray: "8 8"
+        }
+      ).addTo(state.map);
+
+      // Add forecast points
+      storm.trajectory.forEach(point => {
+
+        const marker = L.circleMarker(
+          [point.latitude, point.longitude],
+          {
+            radius: 5,
+            color: "#f97316",
+            fillColor: "#f97316",
+            fillOpacity: 0.9,
+            weight: 2
+          }
+        ).addTo(state.map);
+
+        marker.bindTooltip(
+          `<b>Storm Forecast</b><br>${point.time}`,
+          {
+            direction: "top"
+          }
+        );
+
+        state.stormTrajectoryMarkers.push(marker);
       });
+    }
 
-      const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(state.map);
+         // Secondary Moderate Risk Polygon
 
-      const popupContent = `
-        <div class="p-2 min-w-[200px]">
-          <div class="flex items-center justify-between border-b border-slate-700 pb-1 mb-2">
-            <span class="font-bold text-sm text-cyan-400 font-mono">${loc.name}</span>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${getRiskBadgeClass(loc.currentRisk)}">${loc.currentRisk}</span>
-          </div>
-          <div class="text-xs space-y-1 text-gray-300">
-            <div><b>Temp:</b> ${loc.temp}°C | <b>Humidity:</b> ${loc.humidity}%</div>
-            <div><b>Rain Intensity:</b> ${loc.rainfallRate} mm/hr</div>
-            <div><b>Next Storm ETA:</b> <span class="text-amber-400 font-mono font-bold">${loc.nextHazardETA}</span></div>
-          </div>
-          <button onclick="window.selectLocationFromMap('${loc.id}')" class="mt-3 w-full bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold py-1 px-2 rounded transition">
-            View Full Nowcast & Precautions
-          </button>
-        </div>
-      `;
+      const polygon = L.polygon([
+        [13.25, 79.85],
+        [13.40, 80.15],
+        [13.10, 80.35],
+        [12.90, 80.05]
+      ], {
+        color: "#f97316",
+        fillColor: "#f97316",
+        fillOpacity: 0.2
+      }).addTo(state.map);
 
-      marker.bindPopup(popupContent);
-    });
-  }
+      polygon.bindTooltip(
+        "<b>High Convective Risk Zone</b><br>0-6 Hr Forecast Area",
+        { permanent: false }
+      );
 
-  // Global Map Selection Helper
-  window.selectLocationFromMap = function(locId) {
+      state.riskPolygons.push(polygon);
+
+    } // <-- THIS closes renderMapOverlays()
+
+    // Global Map Selection Helper
+    window.selectLocationFromMap = function(locId) {
     document.getElementById("location-selector").value = locId;
     handleLocationChange(locId);
     switchView("dashboard");
@@ -1025,7 +1166,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!container) return;
 
     container.innerHTML = "";
-    ALERTORA_DATA.alertsFeed.forEach(alert => {
+    const alerts = state.apiData?.alerts?.alerts || [];
+
+alerts.forEach(alert => {
       const alertCard = document.createElement("div");
       const borderClass = alert.severity === "RED" ? "border-red-500/60 bg-red-950/20" : (alert.severity === "ORANGE" ? "border-orange-500/50 bg-orange-950/20" : "border-yellow-500/40 bg-yellow-950/20");
       

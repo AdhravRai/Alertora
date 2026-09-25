@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any
 from backend.models import LocationProfile, AlertItem, EOCDistrictRow
+from backend.fixtures import DEVELOPMENT_FIXTURE
 from backend.ai_engine import ai_engine
 
 app = FastAPI(
@@ -35,21 +36,71 @@ def read_root():
 
 @app.get("/api/system-status")
 def get_system_status():
-    return {
-        "status": "AI SYSTEM ONLINE",
-        "confidence": 91,
-        "active_models": ["ConvLSTM-Nowcast-v2", "U-Net-Reflectivity-v4", "LightningSurge-XGB"],
-        "sensors": {
-            "radar": "ONLINE",
-            "satellite": "ONLINE",
-            "lightning": "ONLINE",
-            "aws": "ONLINE"
-        }
-    }
+    return DEVELOPMENT_FIXTURE["system_status"]
 
 @app.get("/api/prediction")
 def get_prediction(location_id: str = "chennai", lat: float = 13.0827, lng: float = 80.2707):
     return ai_engine.predict_nowcast(lat=lat, lng=lng, location_id=location_id)
+
+
+@app.get("/api/locations")
+def get_locations():
+    return [
+        {
+            "id": "chennai",
+            "name": "Chennai Metropolis",
+            "latitude": 13.0827,
+            "longitude": 80.2707
+        }
+    ]
+    
+@app.get("/api/current-risk")
+def get_current_risk():
+    return DEVELOPMENT_FIXTURE["current_risk"]
+
+
+@app.get("/api/forecast")
+def get_forecast():
+    return DEVELOPMENT_FIXTURE["forecast"]
+
+
+@app.get("/api/storms")
+def get_storms():
+    return DEVELOPMENT_FIXTURE["storms"]
+
+
+@app.get("/api/alerts")
+def get_alerts():
+    return DEVELOPMENT_FIXTURE["alerts"]
+
+
+@app.get("/api/explainability")
+def get_explainability():
+    return DEVELOPMENT_FIXTURE["explainability"]
+
+
+@app.get("/api/historical-events")
+def get_historical_events():
+    return DEVELOPMENT_FIXTURE["historical_events"]
+
+
+@app.get("/api/historical-events/{event_id}")
+def get_historical_event(event_id: str):
+
+    for event in DEVELOPMENT_FIXTURE["historical_events"]["events"]:
+        if event.get("id") == event_id:
+            return event
+
+    raise HTTPException(
+        status_code=404,
+        detail="Historical event not found"
+    )
+
+
+
+
+
+
 
 @app.post("/api/trigger-warning")
 def trigger_warning(district: str):
