@@ -1,0 +1,116 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Data
+# =========================
+data/raw/*
+data/processed/*
+data/samples/*
+
+# Keep folder structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/samples/.gitkeep
+
+# Large meteorological files
+*.nc
+*.nc4
+*.h5
+*.hdf
+*.grib
+*.grib2
+*.zip
+*.tar
+*.gz
+*.tif
+*.tiff
+
+# CSVs can become huge during experimentation
+# Uncomment if you don't want ANY CSV files tracked
+# *.csv
+
+# =========================
+# ML Models / Artifacts
+# =========================
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.keras
+models/*.pt
+models/*.pth
+models/*.onnx
+
+# Experiment outputs
+mlruns/
+mlartifacts/
+wandb/
+runs/
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Python tooling
+# =========================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# =========================
+# IDE / Editors
+# =========================
+.vscode/*
+!.vscode/settings.json
+
+.idea/
+*.swp
+*.swo
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# =========================
+# Local outputs
+# =========================
+outputs/
+results/
