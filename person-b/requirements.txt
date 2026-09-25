@@ -1,0 +1,9 @@
+numpy
+scipy
+pandas
+matplotlib
+scikit-image
+opencv-python
+xarray
+netcdf4
+jupyter
