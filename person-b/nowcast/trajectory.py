@@ -1,8 +1,7 @@
-def predict_position(storm, motion, lead_minutes):
-    """
-    Predict storm position after a given number of minutes.
-    """
+LEAD_TIMES = [30, 60, 90, 120, 180, 360]
 
+
+def predict_position(storm, motion, lead_minutes):
     future_x = (
         storm["centroid_x"]
         + motion["vx"] * lead_minutes
@@ -21,28 +20,7 @@ def predict_position(storm, motion, lead_minutes):
 
 
 def generate_trajectory(storm, motion):
-    """
-    Generate future storm positions.
-    """
-
-    lead_times = [
-        30,
-        60,
-        90,
-        120,
-        180,
-        360
+    return [
+        predict_position(storm, motion, minutes)
+        for minutes in LEAD_TIMES
     ]
-
-    trajectory = []
-
-    for minutes in lead_times:
-        position = predict_position(
-            storm,
-            motion,
-            minutes
-        )
-
-        trajectory.append(position)
-
-    return trajectory
