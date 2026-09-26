@@ -4,9 +4,8 @@ import pandas as pd
 import xarray as xr
 
 
-DATA_DIR = "data/raw/f91110cd-f5a7-4cb4-b47f-8671c828331e"
-OUTPUT_FILE = "data/processed/imdaa_20200715.nc"
-
+DATA_DIR = "data/raw"
+OUTPUT_FILE = "data/processed/imdaa_july2020.nc"
 
 VARIABLES = {
     "APCP-sfc": ("param8.1.0", "precipitation"),
@@ -19,20 +18,30 @@ VARIABLES = {
 }
 
 
-def get_timestamp_from_filename(file):
-    filename = os.path.basename(file)
+def get_files(prefix):
+    pattern = os.path.join(DATA_DIR, "**", f"{prefix}_*.nc")
+    files = glob.glob(pattern, recursive=True)
 
-    timestamp_string = filename.split("_")[1]
+    files = [
+        f for f in files
+        if "20200701" <= os.path.basename(f).split("_")[1][:8] <= "20200731"
+    ]
 
-    return pd.to_datetime(timestamp_string, format="%Y%m%d%H")
+    return sorted(files)
+
+
+def get_timestamp(file):
+    timestamp = os.path.basename(file).split("_")[1]
+    return pd.to_datetime(timestamp, format="%Y%m%d%H")
 
 
 def load_variable(prefix, variable_name, output_name):
 
-    pattern = os.path.join(DATA_DIR, f"{prefix}_*.nc")
-    files = sorted(glob.glob(pattern))
+    files = get_files(prefix)
 
-    datasets = []
+    print(f"  {len(files)} files")
+
+    frames = []
 
     for file in files:
 
@@ -43,29 +52,24 @@ def load_variable(prefix, variable_name, output_name):
         if "height" in data.dims:
             data = data.squeeze("height", drop=True)
 
-        timestamp = get_timestamp_from_filename(file)
-
         if "time" in data.dims:
             data = data.isel(time=0, drop=True)
 
-        data = data.expand_dims(time=[timestamp])
+        timestamp = get_timestamp(file)
 
+        data = data.expand_dims(time=[timestamp])
         data = data.rename(output_name)
 
-        datasets.append(data)
+        frames.append(data)
 
         ds.close()
 
-    combined = xr.concat(
-        datasets,
+    return xr.concat(
+        frames,
         dim="time",
         coords="minimal",
         compat="override"
-    )
-
-    combined = combined.sortby("time")
-
-    return combined
+    ).sortby("time")
 
 
 def main():
@@ -82,10 +86,7 @@ def main():
             output_name
         )
 
-        print(
-            f"  shape={data.shape}, "
-            f"time={len(data.time)}"
-        )
+        print(f"  shape = {data.shape}")
 
         variables.append(data)
 
@@ -98,13 +99,13 @@ def main():
     print("\nFinal dataset:")
     print(dataset)
 
-    print("\nTime values:")
-    print(dataset.time.values)
+    print("\nTime range:")
+    print(dataset.time.values[0])
+    print(dataset.time.values[-1])
 
-    os.makedirs(
-        os.path.dirname(OUTPUT_FILE),
-        exist_ok=True
-    )
+    print(f"\nTotal timestamps: {len(dataset.time)}")
+
+    os.makedirs("data/processed", exist_ok=True)
 
     dataset.to_netcdf(OUTPUT_FILE)
 
