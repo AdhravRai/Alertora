@@ -6,14 +6,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Application State
   const state = {
     currentView: "landing", // landing, dashboard, map, predictions, alerts, precautions, eoc, mysafety, analytics, fusion, about
-    selectedLocationId: "chennai",
+    selectedLocationId: "ml-forecast-region",
     selectedHazard: "THUNDERSTORM",
     apiData: {
   systemStatus: null,
   currentRisk: null,
   forecast: null,
   storms: null,
-  alerts: null
+  alerts: null,
+  explainability: null
 },
     selectedTimelineHourIndex: 0,
     activeMapLayer: "radar",
@@ -22,6 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 stormTrajectoryLine: null,
 stormTrajectoryMarkers: [],
 riskPolygons: [],
+mlGridLayer: null,
     stormSimulationActive: false,
     stormSimulationInterval: null,
     countdownSeconds: 5076, // 01:24:36
@@ -60,25 +62,28 @@ riskPolygons: [],
 const locations = await window.alertoraAPI.getLocations();
 
 try {
-  const [
-    systemStatus,
-    currentRisk,
-    forecast,
-    storms,
-    alerts
-  ] = await Promise.all([
-    window.alertoraAPI.getSystemStatus(),
-    window.alertoraAPI.getCurrentRisk(),
-    window.alertoraAPI.getForecast(),
-    window.alertoraAPI.getStorms(),
-    window.alertoraAPI.getAlerts()
-  ]);
+ const [
+  systemStatus,
+  currentRisk,
+  forecast,
+  storms,
+  alerts,
+  explainability
+] = await Promise.all([
+  window.alertoraAPI.getSystemStatus(),
+  window.alertoraAPI.getCurrentRisk(),
+  window.alertoraAPI.getForecast(),
+  window.alertoraAPI.getStorms(),
+  window.alertoraAPI.getAlerts(),
+  window.alertoraAPI.getExplainability()
+]);
 
   state.apiData.systemStatus = systemStatus;
   state.apiData.currentRisk = currentRisk;
   state.apiData.forecast = forecast;
   state.apiData.storms = storms;
   state.apiData.alerts = alerts;
+  state.apiData.explainability = explainability;
 
   console.log("[ALERTORA] FastAPI product data loaded:", state.apiData);
 } catch (error) {
@@ -479,7 +484,7 @@ nextHazardType: "Forecast warning",
     const countdownRiskBadge = document.getElementById("countdown-risk-badge");
 
 if (countdownRiskBadge) {
-  countdownRiskBadge.textContent = `${loc.currentRisk} RISK`;
+  countdownRiskBadge.textContent = `${gpsLoc.currentRisk} RISK`;
 }
 
     // Show GPS status badge and coordinates display
@@ -575,6 +580,60 @@ function updateDashboardForLocation(locId) {
   const alerts = state.apiData?.alerts?.alerts || [];
 const activeAlert = alerts[0] || null;
 
+// Update ML Nowcast Summary Card
+const mlRisk = state.apiData?.currentRisk;
+
+const mlProbabilityEl =
+  document.getElementById("ml-nowcast-probability");
+
+const mlHighRainCellsEl =
+  document.getElementById("ml-high-rain-cells");
+
+const mlGridCoverageEl =
+  document.getElementById("ml-grid-coverage");
+
+const countdownRiskBadge =
+  document.getElementById("countdown-risk-badge");
+
+const countdownHazardType =
+  document.getElementById("countdown-hazard-type");
+
+const countdownLocation =
+  document.getElementById("countdown-location");
+
+if (mlRisk) {
+  if (mlProbabilityEl) {
+    mlProbabilityEl.textContent =
+      `${Number(mlRisk.nowcast_probability || 0).toFixed(2)}%`;
+  }
+
+  if (mlHighRainCellsEl) {
+    mlHighRainCellsEl.textContent =
+      `${Number(mlRisk.predicted_high_rain_cells || 0)}`;
+  }
+
+  if (mlGridCoverageEl) {
+    mlGridCoverageEl.textContent =
+      `${Number(mlRisk.total_cells || 0) || 289} cells`;
+  }
+
+  if (countdownRiskBadge) {
+    countdownRiskBadge.textContent =
+      `${mlRisk.risk_level || "UNKNOWN"} RISK`;
+  }
+
+  if (countdownHazardType) {
+    countdownHazardType.textContent =
+      "Heavy Rain Nowcast";
+  }
+
+  if (countdownLocation) {
+    countdownLocation.textContent =
+      `${Number(mlRisk.latitude || 0).toFixed(4)}°N, ` +
+      `${Number(mlRisk.longitude || 0).toFixed(4)}°E`;
+  }
+}
+
   // Keep the existing UI structure, but override
   // risk/forecast values with FastAPI fixture data.
   const loc = {
@@ -586,24 +645,36 @@ const activeAlert = alerts[0] || null;
       nextHazardETA: activeAlert?.eta || null,
 nextHazardType: activeAlert?.title || "Forecast warning",
 
-    nowcast: forecast?.points
-      ? forecast.points.map((point) => ({
-          time: point.time,
-          hour: point.time,
+   nowcast: forecast?.points
+  ? forecast.points.map((point) => ({
+      time: point.time,
+      hour: point.hour,
 
-          thunderstorm: point.thunderstorm_probability ?? 0,
-          rainfall: point.heavy_rain_probability ?? 0,
-          
+      nowcast_probability:
+        point.nowcast_probability ?? 0,
 
-          // Temporary compatibility fields.
-          // These will be replaced when the real hazard
-          // outputs are supplied.
-          hail: 0,
-          cloudburst: 0,
-          lightning: 0,
-          wind: baseLoc.windSpeed ?? 0
-        }))
-      : baseLoc.nowcast
+      ml_probability:
+        point.ml_probability ?? 0,
+
+      mean_probability:
+        point.mean_probability ?? 0,
+
+      predicted_high_rain_cells:
+        point.predicted_high_rain_cells ?? 0,
+
+      total_cells:
+        point.total_cells ?? 0,
+
+      lead_hours:
+        point.lead_hours ?? 0,
+
+   storm_position:
+  point.storm_position ?? null,
+
+grid:
+  point.grid ?? null
+    }))
+  : []
   };
 
     // Current metrics
@@ -647,83 +718,145 @@ nextHazardType: activeAlert?.title || "Forecast warning",
     }
   }
 
-  // Render AI Nowcast Timeline (0-6 Hours)
-  function renderNowcastTimeline(nowcastData) {
-    const timelineContainer = document.getElementById("nowcast-timeline-bars");
-    const hourSelectorContainer = document.getElementById("nowcast-hour-buttons");
+ function renderNowcastTimeline(nowcastData) {
+  const timelineContainer =
+    document.getElementById("nowcast-timeline-bars");
 
-    if (!timelineContainer || !hourSelectorContainer) return;
+  const hourSelectorContainer =
+    document.getElementById("nowcast-hour-buttons");
 
-    hourSelectorContainer.innerHTML = "";
-    nowcastData.forEach((item, idx) => {
-      const btn = document.createElement("button");
-      btn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-        idx === state.selectedTimelineHourIndex
-          ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/30"
-          : "bg-slate-800/80 text-gray-300 hover:bg-slate-700"
-      }`;
-      btn.innerHTML = `<span class="block text-[10px] opacity-75">${item.time}</span>${item.hour}`;
-      btn.addEventListener("click", () => {
-        state.selectedTimelineHourIndex = idx;
-        renderNowcastTimeline(nowcastData);
-      });
-      hourSelectorContainer.appendChild(btn);
-    });
+  if (!timelineContainer || !hourSelectorContainer) return;
 
-    const activeItem = nowcastData[state.selectedTimelineHourIndex] || nowcastData[0];
-
+  if (!nowcastData || !nowcastData.length) {
     timelineContainer.innerHTML = `
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div class="glass-panel p-3 rounded-lg border-slate-800">
-          <div class="text-xs text-gray-400">Thunderstorm</div>
-          <div class="text-2xl font-bold font-mono text-cyan-400 mt-1">${activeItem.thunderstorm}%</div>
-          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-            <div class="bg-cyan-400 h-1.5 rounded-full" style="width: ${activeItem.thunderstorm}%"></div>
-          </div>
-        </div>
-
-        <div class="glass-panel p-3 rounded-lg border-slate-800">
-          <div class="text-xs text-gray-400">Hail Prob.</div>
-          <div class="text-2xl font-bold font-mono text-amber-400 mt-1">${activeItem.hail}%</div>
-          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-            <div class="bg-amber-400 h-1.5 rounded-full" style="width: ${activeItem.hail}%"></div>
-          </div>
-        </div>
-
-        <div class="glass-panel p-3 rounded-lg border-slate-800">
-          <div class="text-xs text-gray-400">Cloudburst Risk</div>
-          <div class="text-2xl font-bold font-mono text-orange-400 mt-1">${activeItem.cloudburst}%</div>
-          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-            <div class="bg-orange-400 h-1.5 rounded-full" style="width: ${activeItem.cloudburst}%"></div>
-          </div>
-        </div>
-
-        <div class="glass-panel p-3 rounded-lg border-slate-800">
-          <div class="text-xs text-gray-400">Lightning Strikes</div>
-          <div class="text-2xl font-bold font-mono text-red-400 mt-1">${activeItem.lightning}%</div>
-          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-            <div class="bg-red-400 h-1.5 rounded-full" style="width: ${activeItem.lightning}%"></div>
-          </div>
-        </div>
-
-        <div class="glass-panel p-3 rounded-lg border-slate-800">
-          <div class="text-xs text-gray-400">Rain Intensity</div>
-          <div class="text-2xl font-bold font-mono text-blue-400 mt-1">${activeItem.rainfall} <span class="text-xs font-normal">mm/h</span></div>
-          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-            <div class="bg-blue-400 h-1.5 rounded-full" style="width: ${Math.min(100, activeItem.rainfall)}%"></div>
-          </div>
-        </div>
-
-        <div class="glass-panel p-3 rounded-lg border-slate-800">
-          <div class="text-xs text-gray-400">Downburst Wind</div>
-          <div class="text-2xl font-bold font-mono text-indigo-400 mt-1">${activeItem.wind} <span class="text-xs font-normal">km/h</span></div>
-          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-            <div class="bg-indigo-400 h-1.5 rounded-full" style="width: ${Math.min(100, activeItem.wind * 1.2)}%"></div>
-          </div>
-        </div>
+      <div class="text-sm text-gray-400">
+        Forecast data unavailable.
       </div>
     `;
+    hourSelectorContainer.innerHTML = "";
+    return;
   }
+
+  hourSelectorContainer.innerHTML = "";
+
+  nowcastData.forEach((item, idx) => {
+    const btn = document.createElement("button");
+
+    btn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+      idx === state.selectedTimelineHourIndex
+        ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/30"
+        : "bg-slate-800/80 text-gray-300 hover:bg-slate-700"
+    }`;
+
+    btn.innerHTML = `
+      <span class="block text-[10px] opacity-75">
+        ${item.time || `+${idx + 1}h`}
+      </span>
+      ${item.hour || `+${idx + 1} HR`}
+    `;
+
+  btn.addEventListener("click", () => {
+  state.selectedTimelineHourIndex = idx;
+
+  renderNowcastTimeline(nowcastData);
+
+  const selectedForecast = nowcastData[idx];
+
+  if (selectedForecast?.grid) {
+    renderMLForecastGrid(selectedForecast.grid);
+  }
+});
+
+    hourSelectorContainer.appendChild(btn);
+  });
+
+  const activeItem =
+    nowcastData[state.selectedTimelineHourIndex] ||
+    nowcastData[0];
+
+  const nowcast = Number(activeItem.nowcast_probability || 0);
+  const mlProbability = Number(activeItem.ml_probability || 0);
+  const meanProbability = Number(activeItem.mean_probability || 0);
+  const highRainCells =
+    Number(activeItem.predicted_high_rain_cells || 0);
+  const totalCells =
+    Number(activeItem.total_cells || 0);
+
+  timelineContainer.innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+
+      <div class="glass-panel p-3 rounded-lg border-slate-800">
+        <div class="text-xs text-gray-400">Nowcast Risk</div>
+        <div class="text-2xl font-bold font-mono text-cyan-400 mt-1">
+          ${nowcast.toFixed(2)}%
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+          <div
+            class="bg-cyan-400 h-1.5 rounded-full"
+            style="width: ${Math.min(100, nowcast)}%"
+          ></div>
+        </div>
+      </div>
+
+      <div class="glass-panel p-3 rounded-lg border-slate-800">
+        <div class="text-xs text-gray-400">ML Probability</div>
+        <div class="text-2xl font-bold font-mono text-blue-400 mt-1">
+          ${mlProbability.toFixed(2)}%
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+          <div
+            class="bg-blue-400 h-1.5 rounded-full"
+            style="width: ${Math.min(100, mlProbability)}%"
+          ></div>
+        </div>
+      </div>
+
+      <div class="glass-panel p-3 rounded-lg border-slate-800">
+        <div class="text-xs text-gray-400">Mean Grid Risk</div>
+        <div class="text-2xl font-bold font-mono text-indigo-400 mt-1">
+          ${meanProbability.toFixed(2)}%
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+          <div
+            class="bg-indigo-400 h-1.5 rounded-full"
+            style="width: ${Math.min(100, meanProbability)}%"
+          ></div>
+        </div>
+      </div>
+
+      <div class="glass-panel p-3 rounded-lg border-slate-800">
+        <div class="text-xs text-gray-400">High-Rain Cells</div>
+        <div class="text-2xl font-bold font-mono text-orange-400 mt-1">
+          ${highRainCells}
+        </div>
+        <div class="text-[10px] text-gray-500 mt-2">
+          Predicted high-rain locations
+        </div>
+      </div>
+
+      <div class="glass-panel p-3 rounded-lg border-slate-800">
+        <div class="text-xs text-gray-400">Grid Coverage</div>
+        <div class="text-2xl font-bold font-mono text-emerald-400 mt-1">
+          ${totalCells}
+        </div>
+        <div class="text-[10px] text-gray-500 mt-2">
+          Spatial forecast cells
+        </div>
+      </div>
+
+      <div class="glass-panel p-3 rounded-lg border-slate-800">
+        <div class="text-xs text-gray-400">Lead Time</div>
+        <div class="text-2xl font-bold font-mono text-amber-400 mt-1">
+          +${Number(activeItem.lead_hours || 0).toFixed(0)}h
+        </div>
+        <div class="text-[10px] text-gray-500 mt-2">
+          Trajectory-based nowcast
+        </div>
+      </div>
+
+    </div>
+  `;
+}
 
   // Render 4 Hazard Cards
   function renderHazardCards(loc) {
@@ -766,28 +899,58 @@ nextHazardType: activeAlert?.title || "Forecast warning",
     });
   }
 
-  // Render Explainable AI Factor Contributions
-  function renderXAIPanel() {
-    const container = document.getElementById("xai-factors-container");
-    if (!container) return;
+function renderXAIPanel() {
+  const container = document.getElementById("xai-factors-container");
+  if (!container) return;
 
-    container.innerHTML = "";
-    ALERTORA_DATA.xaiFactors.forEach(f => {
-      const row = document.createElement("div");
-      row.className = "mb-3";
-      row.innerHTML = `
-        <div class="flex justify-between text-xs mb-1">
-          <span class="text-gray-300 font-medium">${f.factor}</span>
-          <span class="font-mono text-cyan-400 font-bold">+${f.weight}% Contribution</span>
-        </div>
-        <div class="w-full bg-slate-800 rounded-full h-2">
-          <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full" style="width: ${f.weight * 2.5}%"></div>
-        </div>
-        <div class="text-[10px] text-gray-400 mt-0.5">${f.description}</div>
-      `;
-      container.appendChild(row);
-    });
+  const xai = state.apiData?.explainability;
+  const features = xai?.global_top_features || [];
+
+  container.innerHTML = "";
+
+  if (!features.length) {
+    container.innerHTML = `
+      <div class="text-xs text-gray-400">
+        Explainability data unavailable.
+      </div>
+    `;
+    return;
   }
+
+  const maxShap = Math.max(
+    ...features.map(f => Math.abs(f.mean_abs_shap || 0)),
+    0.000001
+  );
+
+  features.slice(0, 5).forEach(feature => {
+    const row = document.createElement("div");
+    row.className = "mb-3";
+
+    const value = Math.abs(feature.mean_abs_shap || 0);
+    const width = (value / maxShap) * 100;
+
+    row.innerHTML = `
+      <div class="flex justify-between text-xs mb-1">
+        <span class="text-gray-300 font-medium">
+          ${feature.feature}
+        </span>
+
+        <span class="font-mono text-cyan-400 font-bold">
+          SHAP ${value.toFixed(4)}
+        </span>
+      </div>
+
+      <div class="w-full bg-slate-800 rounded-full h-2">
+        <div
+          class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full"
+          style="width: ${width}%"
+        ></div>
+      </div>
+    `;
+
+    container.appendChild(row);
+  });
+}
 
   // Initialize GIS Interactive Map (Leaflet)
   function initGISMap() {
@@ -796,8 +959,8 @@ nextHazardType: activeAlert?.title || "Forecast warning",
 
     // Create Leaflet Map centered on Chennai / Tamil Nadu
     state.map = L.map("gis-map-container", {
-      center: [13.0827, 80.2707],
-      zoom: 9,
+     center: [26.3267, 82.8067],
+zoom: 8,
       zoomControl: true
     });
 
@@ -811,6 +974,61 @@ nextHazardType: activeAlert?.title || "Forecast warning",
     // Render Location Markers & Risk Polygons
     renderMapOverlays();
 
+
+    const legend = L.control({ position: "bottomright" });
+
+legend.onAdd = function () {
+  const div = L.DomUtil.create("div", "ml-risk-legend");
+
+  div.innerHTML = `
+    <div style="
+      background: rgba(15, 23, 42, 0.94);
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: white;
+      font-family: monospace;
+      font-size: 11px;
+      border: 1px solid rgba(100,116,139,0.5);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    ">
+      <div style="font-weight:bold; margin-bottom:6px;">
+        ML NOWCAST PROBABILITY
+      </div>
+
+      <div style="
+        width: 180px;
+        height: 10px;
+        border-radius: 4px;
+        background: linear-gradient(
+          to right,
+          hsl(220,90%,55%),
+          hsl(165,90%,55%),
+          hsl(110,90%,55%),
+          hsl(55,90%,55%),
+          hsl(20,90%,55%),
+          hsl(0,90%,55%)
+        );
+      "></div>
+
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        margin-top:4px;
+        color:#cbd5e1;
+      ">
+        <span>0%</span>
+        <span>25%</span>
+        <span>50%</span>
+        <span>75%</span>
+        <span>100%</span>
+      </div>
+    </div>
+  `;
+
+  return div;
+};
+
+legend.addTo(state.map);
     // Map Click Listener to pick custom coordinates
     state.map.on("click", (e) => {
       const { lat, lng } = e.latlng;
@@ -829,6 +1047,97 @@ nextHazardType: activeAlert?.title || "Forecast warning",
       });
     });
   }
+
+function renderMLForecastGrid(grid) {
+  if (!state.map || !grid || !Array.isArray(grid.cells)) return;
+
+  // Remove previous ML grid
+  if (state.mlGridLayer) {
+    state.map.removeLayer(state.mlGridLayer);
+    state.mlGridLayer = null;
+  }
+
+  const cells = grid.cells;
+
+  if (!cells.length) return;
+
+  const latitudes = [...new Set(
+    cells.map(cell => Number(cell.latitude))
+  )].sort((a, b) => a - b);
+
+  const longitudes = [...new Set(
+    cells.map(cell => Number(cell.longitude))
+  )].sort((a, b) => a - b);
+
+  const latStep = latitudes.length > 1
+    ? Math.abs(latitudes[1] - latitudes[0])
+    : 0.08;
+
+  const lonStep = longitudes.length > 1
+    ? Math.abs(longitudes[1] - longitudes[0])
+    : 0.08;
+
+  const halfLat = latStep / 2;
+  const halfLon = lonStep / 2;
+
+  const gridLayer = L.layerGroup();
+
+  cells.forEach((cell) => {
+    const probability = Math.max(
+      0,
+      Math.min(1, Number(cell.nowcast_probability || 0))
+    );
+
+    const riskPercent = probability * 100;
+
+    // Blue -> Cyan -> Green -> Yellow -> Orange -> Red
+    const hue = Math.max(0, 220 - probability * 220);
+    const fillColor = `hsl(${hue}, 90%, 55%)`;
+
+    const rectangle = L.rectangle(
+      [
+        [
+          Number(cell.latitude) - halfLat,
+          Number(cell.longitude) - halfLon
+        ],
+        [
+          Number(cell.latitude) + halfLat,
+          Number(cell.longitude) + halfLon
+        ]
+      ],
+      {
+        color: fillColor,
+        weight: 1,
+        opacity: 0.45,
+        fillColor: fillColor,
+        fillOpacity: 0.48
+      }
+    );
+
+    rectangle.bindTooltip(`
+      <div style="font-family: monospace">
+        <strong>ML Heavy-Rain Risk</strong><br>
+        Nowcast: ${riskPercent.toFixed(1)}%<br>
+        ML Probability: ${(Number(cell.ml_probability || 0) * 100).toFixed(1)}%<br>
+        Storm Proximity: ${Number(cell.storm_proximity || 0).toFixed(3)}<br>
+        High-Rain Cell: ${cell.predicted_high_rain ? "YES" : "NO"}
+      </div>
+    `);
+
+    rectangle.addTo(gridLayer);
+  });
+
+  gridLayer.addTo(state.map);
+  state.mlGridLayer = gridLayer;
+}
+
+const bounds = L.latLngBounds(
+  cells.map(cell => [cell.latitude, cell.longitude])
+);
+
+state.map.fitBounds(bounds.pad(0.35), {
+  animate: false
+});
 
   // Render Map Overlays & Risk Polygons
  function renderMapOverlays() {
@@ -853,6 +1162,12 @@ nextHazardType: activeAlert?.title || "Forecast warning",
     // Read storm data supplied by FastAPI
     const storm = state.apiData?.storms?.storms?.[0] || null;
 
+    const firstForecast = state.apiData?.forecast?.points?.[0];
+
+if (firstForecast?.grid) {
+  renderMLForecastGrid(firstForecast.grid);
+}
+
     // Current storm position
     const currentPosition = storm?.current_position || {
       latitude: 13.12,
@@ -874,7 +1189,7 @@ nextHazardType: activeAlert?.title || "Forecast warning",
     }).addTo(state.map);
 
     state.radarOverlay.bindTooltip(
-      "<b>Storm Core Active</b><br>Development fixture",
+      "<b>Storm Core Active</b><br>ML Nowcast",
       {
         permanent: false,
         direction: "top"
@@ -933,23 +1248,7 @@ nextHazardType: activeAlert?.title || "Forecast warning",
 
          // Secondary Moderate Risk Polygon
 
-      const polygon = L.polygon([
-        [13.25, 79.85],
-        [13.40, 80.15],
-        [13.10, 80.35],
-        [12.90, 80.05]
-      ], {
-        color: "#f97316",
-        fillColor: "#f97316",
-        fillOpacity: 0.2
-      }).addTo(state.map);
-
-      polygon.bindTooltip(
-        "<b>High Convective Risk Zone</b><br>0-6 Hr Forecast Area",
-        { permanent: false }
-      );
-
-      state.riskPolygons.push(polygon);
+    
 
     } // <-- THIS closes renderMapOverlays()
 
@@ -1555,79 +1854,137 @@ alerts.forEach(alert => {
     });
   }
 
-  // Update Header Live Nowcast Strip & Dynamic Header Controls
-  function updateHeaderNowcastData(loc) {
-    if (!loc) return;
+function updateHeaderNowcastData(loc) {
+  if (!loc) return;
 
-    // Location name
-    const stripLocEl = document.getElementById("strip-loc-name");
-    if (stripLocEl) stripLocEl.textContent = loc.name || loc.placeName || "Selected Location";
+  const currentNowcast =
+    loc.nowcast && loc.nowcast.length > 0
+      ? loc.nowcast[0]
+      : null;
 
-    // Risk Badges
-    const riskBadgeClass = getRiskBadgeClass(loc.currentRisk);
-    const headerRiskEl = document.getElementById("header-location-risk-badge");
-    if (headerRiskEl) {
-      headerRiskEl.textContent = `${loc.currentRisk} RISK`;
-      headerRiskEl.className = `px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${riskBadgeClass}`;
+  const risk = loc.currentRisk || "UNKNOWN";
+
+  // Location
+  const stripLocEl = document.getElementById("strip-loc-name");
+  if (stripLocEl) {
+    stripLocEl.textContent =
+      state.selectedLocationId === "ml-forecast-region"
+        ? "ML Forecast Region"
+        : (loc.name || loc.placeName || "Selected Location");
+  }
+
+  // Risk badges
+  const riskBadgeClass = getRiskBadgeClass(risk);
+
+  const headerRiskEl =
+    document.getElementById("header-location-risk-badge");
+
+  if (headerRiskEl) {
+    headerRiskEl.textContent = `${risk} RISK`;
+    headerRiskEl.className =
+      `px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${riskBadgeClass}`;
+  }
+
+  const stripRiskEl =
+    document.getElementById("strip-risk-badge");
+
+  if (stripRiskEl) {
+    stripRiskEl.textContent = `${risk} RISK`;
+    stripRiskEl.className =
+      `px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${riskBadgeClass}`;
+  }
+
+  if (currentNowcast) {
+    // ML Nowcast probability
+    const stormEl =
+      document.getElementById("strip-thunderstorm");
+
+    if (stormEl) {
+      stormEl.textContent =
+        `${Number(currentNowcast.nowcast_probability || 0).toFixed(2)}%`;
     }
 
-    const stripRiskEl = document.getElementById("strip-risk-badge");
-    if (stripRiskEl) {
-      stripRiskEl.textContent = `${loc.currentRisk} RISK`;
-      stripRiskEl.className = `px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${riskBadgeClass}`;
+    // ML probability
+    const lightEl =
+      document.getElementById("strip-lightning");
+
+    if (lightEl) {
+      lightEl.textContent =
+        `${Number(currentNowcast.ml_probability || 0).toFixed(2)}%`;
     }
 
-    // Dynamic metrics from nowcast[0]
-    const currentNowcast = (loc.nowcast && loc.nowcast.length > 0) ? loc.nowcast[0] : null;
-    if (currentNowcast) {
-      const stormEl = document.getElementById("strip-thunderstorm");
-      if (stormEl) stormEl.textContent = `${currentNowcast.thunderstorm}%`;
+    // Mean grid probability
+    const cloudEl =
+      document.getElementById("strip-cloudburst");
 
-      const lightEl = document.getElementById("strip-lightning");
-      if (lightEl) lightEl.textContent = `${currentNowcast.lightning}%`;
-
-      const cloudEl = document.getElementById("strip-cloudburst");
-      if (cloudEl) cloudEl.textContent = `${currentNowcast.cloudburst}%`;
-
-      const hailEl = document.getElementById("strip-hail");
-      if (hailEl) hailEl.textContent = `${currentNowcast.hail}%`;
-
-      const windEl = document.getElementById("strip-wind");
-      if (windEl) windEl.textContent = `${currentNowcast.wind || loc.windSpeed || 38} km/h`;
+    if (cloudEl) {
+      cloudEl.textContent =
+        `${Number(currentNowcast.mean_probability || 0).toFixed(2)}%`;
     }
 
-    // Visually responsive risk state on Header border
-    const appHeader = document.getElementById("app-header");
-    if (appHeader) {
-      appHeader.classList.remove("border-cyan-500/30", "border-emerald-500/40", "border-yellow-500/40", "border-orange-500/50", "border-red-500/60", "box-glow-red");
-      if (loc.currentRisk === "EXTREME") {
-        appHeader.classList.add("border-b", "border-red-500/60", "box-glow-red");
-      } else if (loc.currentRisk === "HIGH") {
-        appHeader.classList.add("border-b", "border-orange-500/50");
-      } else if (loc.currentRisk === "MODERATE") {
-        appHeader.classList.add("border-b", "border-yellow-500/40");
-      } else {
-        appHeader.classList.add("border-b", "border-emerald-500/40");
-      }
+    // High-rain cells
+    const hailEl =
+      document.getElementById("strip-hail");
+
+    if (hailEl) {
+      hailEl.textContent =
+        `${Number(currentNowcast.predicted_high_rain_cells || 0)}`;
+    }
+
+    // No wind field is present in the ML handoff, so don't fabricate it.
+    const windEl =
+      document.getElementById("strip-wind");
+
+    if (windEl) {
+      windEl.textContent = "N/A";
     }
   }
 
-  // Live Timestamp Clock for Header Strip
-  function startHeaderClock() {
-    const clockEl = document.getElementById("strip-update-clock");
-    if (!clockEl) return;
+  // Header border state
+  const appHeader =
+    document.getElementById("app-header");
 
-    let seconds = 0;
-    setInterval(() => {
-      seconds++;
-      if (seconds < 60) {
-        clockEl.textContent = `LAST UPDATE: ${seconds} sec ago`;
-      } else {
-        const mins = Math.floor(seconds / 60);
-        clockEl.textContent = `LAST UPDATE: ${mins} min ago`;
-      }
-    }, 1000);
+  if (appHeader) {
+    appHeader.classList.remove(
+      "border-cyan-500/30",
+      "border-emerald-500/40",
+      "border-yellow-500/40",
+      "border-orange-500/50",
+      "border-red-500/60",
+      "box-glow-red"
+    );
+
+    if (risk === "EXTREME") {
+      appHeader.classList.add(
+        "border-b",
+        "border-red-500/60",
+        "box-glow-red"
+      );
+    } else if (risk === "HIGH") {
+      appHeader.classList.add(
+        "border-b",
+        "border-orange-500/50"
+      );
+    } else if (risk === "MODERATE") {
+      appHeader.classList.add(
+        "border-b",
+        "border-yellow-500/40"
+      );
+    } else {
+      appHeader.classList.add(
+        "border-b",
+        "border-emerald-500/40"
+      );
+    }
   }
+}
+
+ function startHeaderClock() {
+  const clockEl = document.getElementById("strip-update-clock");
+  if (!clockEl) return;
+
+  clockEl.textContent = "CASE TIME: 29 JUL 2020 • 02:00 UTC";
+}
 
   // Toast Generator
   function showToast(title, message, severity = "CYAN") {
