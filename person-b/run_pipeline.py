@@ -456,16 +456,17 @@ def main():
                 MIN_OBSERVATIONS,
 
             "precipitation_units":
-                "unverified",
+            "kg/m²",
 
             "precipitation_semantics":
-                "native IMDAA values",
+            "surface total precipitation (accumulated)",
 
             "note": (
-                "Relative precipitation indicators "
-                "are used until the IMDAA APCP "
-                "unit convention is verified."
-            ),
+    "Precipitation is surface total precipitation "
+    "from IMDAA APCP-sfc / param8.1.0. "
+    "Values are expressed in kg/m² and are not "
+    "precipitation rates."
+),
         },
     }
 
