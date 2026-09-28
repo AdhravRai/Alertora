@@ -914,6 +914,52 @@
 
       </div>
 
+            <!-- WHY THIS ALERT - SHAP EXPLAINABILITY -->
+      <div class="glass-panel p-5 rounded-xl border-slate-800">
+
+        <div id="xai-factors-container">
+          <div class="text-xs text-gray-400 font-mono">
+            Loading model explainability...
+          </div>
+        </div>
+
+      </div>
+
+      <!-- HIGH-RISK ZONES -->
+<div class="glass-panel p-5 rounded-xl border-slate-800">
+
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+    <div>
+      <h3 class="text-base font-bold text-white font-mono uppercase">
+        HIGH-RISK ZONES
+      </h3>
+
+      <p class="text-xs text-gray-400 font-mono mt-1">
+        Geographic zones derived from the historical ML nowcast risk field.
+      </p>
+    </div>
+
+    <span
+      id="risk-zone-horizon-label"
+      class="px-2 py-1 rounded bg-orange-950/40 text-orange-400 border border-orange-500/30 text-[10px] font-mono font-bold uppercase">
+      +1H
+    </span>
+  </div>
+
+  <div
+    id="risk-zones-container"
+    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+    <div class="text-xs text-gray-500 font-mono">
+      Loading risk zones...
+    </div>
+
+  </div>
+
+</div>
+
+
+
       <!-- AI NOWCAST NEXT 6 HOURS TIMELINE -->
 
       <div class="glass-panel p-5 rounded-xl border-slate-800">
@@ -1881,9 +1927,8 @@
 
   <script src="js/mockData.js"></script>
 
-  <script src="js/api.js"></script>
-
-  <script src="js/app.js"></script>
+<script src="js/api.js?v=2"></script>
+<script src="js/app.js"></script>
 
 </body>
 

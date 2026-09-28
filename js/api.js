@@ -285,6 +285,32 @@ class AlertoraAPIService {
   }
 
   // ------------------------------------------------------------------------
+  // NEW — Fetch Geographic High-Risk Zones
+  // ------------------------------------------------------------------------
+  async getRiskZones() {
+    if (this.useLiveBackend) {
+      try {
+        const response = await fetch(
+          `${this.baseURL}/risk-zones`
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (err) {
+        console.warn(
+          "Live API risk zones unavailable.",
+          err
+        );
+      }
+    }
+
+    return null;
+  }
+
+  // ------------------------------------------------------------------------
   // Existing XAI fallback
   // ------------------------------------------------------------------------
   async getXAIFactors() {

@@ -62,7 +62,7 @@ mlGridLayer: null,
 const locations = await window.alertoraAPI.getLocations();
 
 try {
- const [
+const [
   systemStatus,
   currentRisk,
   forecast,
@@ -78,14 +78,36 @@ try {
   window.alertoraAPI.getExplainability()
 ]);
 
-  state.apiData.systemStatus = systemStatus;
-  state.apiData.currentRisk = currentRisk;
-  state.apiData.forecast = forecast;
-  state.apiData.storms = storms;
-  state.apiData.alerts = alerts;
-  state.apiData.explainability = explainability;
+state.apiData.systemStatus = systemStatus;
+state.apiData.currentRisk = currentRisk;
+state.apiData.forecast = forecast;
+state.apiData.storms = storms;
+state.apiData.alerts = alerts;
+state.apiData.explainability = explainability;
 
-  console.log("[ALERTORA] FastAPI product data loaded:", state.apiData);
+// Load risk zones separately so a zone request failure
+// cannot break the existing ML forecast dashboard.
+try {
+  state.apiData.riskZones =
+    await window.alertoraAPI.getRiskZones();
+
+  console.log(
+    "[ALERTORA] Risk-zone data loaded:",
+    state.apiData.riskZones
+  );
+} catch (error) {
+  console.warn(
+    "[ALERTORA] Risk-zone data unavailable:",
+    error
+  );
+
+  state.apiData.riskZones = null;
+}
+
+console.log(
+  "[ALERTORA] FastAPI product data loaded:",
+  state.apiData
+);
 } catch (error) {
   console.error("[ALERTORA] Failed to load FastAPI product data:", error);
 }
@@ -733,7 +755,11 @@ grid:
         Forecast data unavailable.
       </div>
     `;
+
     hourSelectorContainer.innerHTML = "";
+
+    renderRiskZonesForHorizon(null);
+
     return;
   }
 
@@ -755,17 +781,17 @@ grid:
       ${item.hour || `+${idx + 1} HR`}
     `;
 
-  btn.addEventListener("click", () => {
-  state.selectedTimelineHourIndex = idx;
+    btn.addEventListener("click", () => {
+      state.selectedTimelineHourIndex = idx;
 
-  renderNowcastTimeline(nowcastData);
+      renderNowcastTimeline(nowcastData);
 
-  const selectedForecast = nowcastData[idx];
+      const selectedForecast = nowcastData[idx];
 
-  if (selectedForecast?.grid) {
-    renderMLForecastGrid(selectedForecast.grid);
-  }
-});
+      if (selectedForecast?.grid) {
+        renderMLForecastGrid(selectedForecast.grid);
+      }
+    });
 
     hourSelectorContainer.appendChild(btn);
   });
@@ -774,13 +800,26 @@ grid:
     nowcastData[state.selectedTimelineHourIndex] ||
     nowcastData[0];
 
-  const nowcast = Number(activeItem.nowcast_probability || 0);
-  const mlProbability = Number(activeItem.ml_probability || 0);
-  const meanProbability = Number(activeItem.mean_probability || 0);
+  const nowcast =
+    Number(activeItem.nowcast_probability || 0);
+
+  const mlProbability =
+    Number(activeItem.ml_probability || 0);
+
+  const meanProbability =
+    Number(activeItem.mean_probability || 0);
+
   const highRainCells =
     Number(activeItem.predicted_high_rain_cells || 0);
+
   const totalCells =
     Number(activeItem.total_cells || 0);
+
+  const leadHours =
+    Number(
+      activeItem.lead_hours ||
+      state.selectedTimelineHourIndex + 1
+    );
 
   timelineContainer.innerHTML = `
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -790,6 +829,7 @@ grid:
         <div class="text-2xl font-bold font-mono text-cyan-400 mt-1">
           ${nowcast.toFixed(2)}%
         </div>
+
         <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
           <div
             class="bg-cyan-400 h-1.5 rounded-full"
@@ -803,6 +843,7 @@ grid:
         <div class="text-2xl font-bold font-mono text-blue-400 mt-1">
           ${mlProbability.toFixed(2)}%
         </div>
+
         <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
           <div
             class="bg-blue-400 h-1.5 rounded-full"
@@ -816,6 +857,7 @@ grid:
         <div class="text-2xl font-bold font-mono text-indigo-400 mt-1">
           ${meanProbability.toFixed(2)}%
         </div>
+
         <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
           <div
             class="bg-indigo-400 h-1.5 rounded-full"
@@ -826,9 +868,11 @@ grid:
 
       <div class="glass-panel p-3 rounded-lg border-slate-800">
         <div class="text-xs text-gray-400">High-Rain Cells</div>
+
         <div class="text-2xl font-bold font-mono text-orange-400 mt-1">
           ${highRainCells}
         </div>
+
         <div class="text-[10px] text-gray-500 mt-2">
           Predicted high-rain locations
         </div>
@@ -836,9 +880,11 @@ grid:
 
       <div class="glass-panel p-3 rounded-lg border-slate-800">
         <div class="text-xs text-gray-400">Grid Coverage</div>
+
         <div class="text-2xl font-bold font-mono text-emerald-400 mt-1">
           ${totalCells}
         </div>
+
         <div class="text-[10px] text-gray-500 mt-2">
           Spatial forecast cells
         </div>
@@ -846,9 +892,11 @@ grid:
 
       <div class="glass-panel p-3 rounded-lg border-slate-800">
         <div class="text-xs text-gray-400">Lead Time</div>
+
         <div class="text-2xl font-bold font-mono text-amber-400 mt-1">
-          +${Number(activeItem.lead_hours || 0).toFixed(0)}h
+          +${leadHours}h
         </div>
+
         <div class="text-[10px] text-gray-500 mt-2">
           Trajectory-based nowcast
         </div>
@@ -856,6 +904,256 @@ grid:
 
     </div>
   `;
+
+  // Render the geographic risk zones for the selected horizon.
+  renderRiskZonesForHorizon(leadHours);
+}
+
+function renderRiskZonesForHorizon(leadHours) {
+  const container =
+    document.getElementById("risk-zones-container");
+
+  const horizonLabel =
+    document.getElementById("risk-zone-horizon-label");
+
+  const riskData =
+    state.apiData?.riskZones;
+
+  if (!container) return;
+
+  if (!leadHours || !riskData?.horizons?.length) {
+    container.innerHTML = `
+      <div class="text-xs text-gray-500 font-mono">
+        Risk-zone data unavailable.
+      </div>
+    `;
+
+    if (horizonLabel) {
+      horizonLabel.textContent = "+--";
+    }
+
+    return;
+  }
+
+  const horizon =
+    riskData.horizons.find(
+      item =>
+        Number(item.lead_hours) === Number(leadHours)
+    );
+
+  if (!horizon) {
+    container.innerHTML = `
+      <div class="text-xs text-gray-500 font-mono">
+        No risk zones available for +${leadHours}h.
+      </div>
+    `;
+
+    return;
+  }
+
+  const zones = horizon.zones || [];
+
+  if (horizonLabel) {
+    horizonLabel.textContent = `+${leadHours}H`;
+  }
+
+  if (!zones.length) {
+    container.innerHTML = `
+      <div class="text-xs text-gray-500 font-mono">
+        No geographic high-risk zones detected for +${leadHours}h.
+      </div>
+    `;
+
+    renderRiskZoneMap(horizon);
+    return;
+  }
+
+  container.innerHTML = zones
+    .map(zone => {
+      const peakProbability =
+        Number(zone.peak_probability || 0) * 100;
+
+      const meanProbability =
+        Number(zone.mean_probability || 0) * 100;
+
+      const centerLat =
+        Number(zone.center?.latitude);
+
+      const centerLon =
+        Number(zone.center?.longitude);
+
+      const distanceKm =
+        Number(
+          zone.storm_relation?.distance_km
+        );
+
+      return `
+        <div class="rounded-xl border border-orange-500/30 bg-orange-950/10 p-4">
+
+          <div class="flex items-center justify-between mb-3">
+
+            <div class="font-mono font-bold text-white">
+              ${zone.zone_id}
+            </div>
+
+            <span class="px-2 py-0.5 rounded text-[10px]
+                         font-mono font-bold
+                         bg-orange-950 text-orange-400
+                         border border-orange-500/40">
+              ${zone.risk_level}
+            </span>
+
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+
+            <div>
+              <div class="text-gray-500">
+                Affected Cells
+              </div>
+
+              <div class="text-orange-300 font-bold mt-1">
+                ${zone.affected_cells}
+              </div>
+            </div>
+
+            <div>
+              <div class="text-gray-500">
+                Forecast Horizon
+              </div>
+
+              <div class="text-cyan-300 font-bold mt-1">
+                +${zone.horizon_hours}h
+              </div>
+            </div>
+
+            <div>
+              <div class="text-gray-500">
+                Peak Probability
+              </div>
+
+              <div class="text-emerald-300 font-bold mt-1">
+                ${peakProbability.toFixed(2)}%
+              </div>
+            </div>
+
+            <div>
+              <div class="text-gray-500">
+                Mean Probability
+              </div>
+
+              <div class="text-blue-300 font-bold mt-1">
+                ${meanProbability.toFixed(2)}%
+              </div>
+            </div>
+
+          </div>
+
+          <div class="mt-3 pt-3 border-t border-slate-800">
+
+            <div class="text-[10px] text-gray-500 font-mono">
+              ZONE CENTER
+            </div>
+
+            <div class="text-xs text-cyan-300 font-mono mt-1">
+              ${centerLat.toFixed(3)}°N,
+              ${centerLon.toFixed(3)}°E
+            </div>
+
+            <div class="text-[10px] text-gray-500 font-mono mt-2">
+              STORM RELATION
+            </div>
+
+            <div class="text-xs text-orange-300 font-mono mt-1">
+              ${distanceKm.toFixed(2)} km from projected storm position
+            </div>
+
+          </div>
+
+        </div>
+      `;
+    })
+    .join("");
+
+  renderRiskZoneMap(horizon);
+}
+
+function renderRiskZoneMap(horizon) {
+  if (!state.map) return;
+
+  // Remove previously rendered risk-zone layers.
+  if (!state.riskZoneLayers) {
+    state.riskZoneLayers = [];
+  }
+
+  state.riskZoneLayers.forEach(layer => {
+    if (state.map.hasLayer(layer)) {
+      state.map.removeLayer(layer);
+    }
+  });
+
+  state.riskZoneLayers = [];
+
+  const zones = horizon?.zones || [];
+
+  zones.forEach(zone => {
+    const box = zone.bounding_box;
+
+    if (
+      !box ||
+      !Number.isFinite(Number(box.min_latitude)) ||
+      !Number.isFinite(Number(box.max_latitude)) ||
+      !Number.isFinite(Number(box.min_longitude)) ||
+      !Number.isFinite(Number(box.max_longitude))
+    ) {
+      return;
+    }
+
+    const bounds = [
+      [
+        Number(box.min_latitude),
+        Number(box.min_longitude)
+      ],
+      [
+        Number(box.max_latitude),
+        Number(box.max_longitude)
+      ]
+    ];
+
+    const peakProbability =
+      Number(zone.peak_probability || 0) * 100;
+
+    const meanProbability =
+      Number(zone.mean_probability || 0) * 100;
+
+    const rectangle = L.rectangle(
+      bounds,
+      {
+        color: "#f97316",
+        weight: 2,
+        opacity: 0.95,
+        fillColor: "#f97316",
+        fillOpacity: 0.14,
+        dashArray: "6 4"
+      }
+    ).addTo(state.map);
+
+    rectangle.bindTooltip(
+      `
+        <strong>HIGH-RISK ZONE ${zone.zone_id}</strong><br>
+        Horizon: +${zone.horizon_hours}h<br>
+        Affected Cells: ${zone.affected_cells}<br>
+        Peak Probability: ${peakProbability.toFixed(2)}%<br>
+        Mean Probability: ${meanProbability.toFixed(2)}%<br>
+        Risk Level: ${zone.risk_level}
+      `,
+      {
+        direction: "top"
+      }
+    );
+
+    state.riskZoneLayers.push(rectangle);
+  });
 }
 
   // Render 4 Hazard Cards
@@ -905,10 +1203,11 @@ function renderXAIPanel() {
 
   const xai = state.apiData?.explainability;
   const features = xai?.global_top_features || [];
+  const cellExplanations = xai?.cell_explanations || [];
 
   container.innerHTML = "";
 
-  if (!features.length) {
+  if (!features.length || !cellExplanations.length) {
     container.innerHTML = `
       <div class="text-xs text-gray-400">
         Explainability data unavailable.
@@ -917,39 +1216,216 @@ function renderXAIPanel() {
     return;
   }
 
+  // Use the highest-probability explained cell from the real SHAP output.
+  const selectedCell = [...cellExplanations].sort(
+    (a, b) =>
+      Number(b.model_probability || 0) -
+      Number(a.model_probability || 0)
+  )[0];
+
+  const positiveFeatures =
+    selectedCell.top_positive_features || [];
+
   const maxShap = Math.max(
-    ...features.map(f => Math.abs(f.mean_abs_shap || 0)),
+    ...features.map(
+      f => Math.abs(Number(f.mean_abs_shap || 0))
+    ),
     0.000001
   );
 
-  features.slice(0, 5).forEach(feature => {
-    const row = document.createElement("div");
-    row.className = "mb-3";
+  const modelProbability =
+    Number(selectedCell.model_probability || 0) * 100;
 
-    const value = Math.abs(feature.mean_abs_shap || 0);
-    const width = (value / maxShap) * 100;
+    // Existing storm trajectory data from the FastAPI /api/storms endpoint.
+  const storm =
+    state.apiData?.storms?.storms?.[0] || null;
 
-    row.innerHTML = `
-      <div class="flex justify-between text-xs mb-1">
-        <span class="text-gray-300 font-medium">
-          ${feature.feature}
-        </span>
+  const currentPosition =
+    storm?.current_position || null;
 
-        <span class="font-mono text-cyan-400 font-bold">
-          SHAP ${value.toFixed(4)}
-        </span>
-      </div>
-
-      <div class="w-full bg-slate-800 rounded-full h-2">
-        <div
-          class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full"
-          style="width: ${width}%"
-        ></div>
-      </div>
+  const trajectoryText = currentPosition
+    ? `
+      Storm trajectory is being used as spatial context for the
+      modeled risk region. Current storm position:
+      ${Number(currentPosition.latitude).toFixed(2)}°N,
+      ${Number(currentPosition.longitude).toFixed(2)}°E.
+    `
+    : `
+      Storm trajectory data is available on the historical GIS map,
+      but the current storm position is unavailable for this panel.
     `;
 
-    container.appendChild(row);
-  });
+  const positiveHtml = positiveFeatures
+    .slice(0, 5)
+    .map(feature => {
+      const shap = Number(feature.shap_value || 0);
+      const value = Number(feature.value || 0);
+
+      return `
+        <div class="flex items-center justify-between gap-3 py-2 border-b border-slate-800 last:border-0">
+          <div class="min-w-0">
+            <div class="text-xs text-gray-200 font-medium truncate">
+              ${feature.feature}
+            </div>
+            <div class="text-[10px] text-gray-500 font-mono">
+              value: ${Number.isFinite(value) ? value.toFixed(3) : "N/A"}
+            </div>
+          </div>
+
+          <div class="text-xs font-mono font-bold text-emerald-400 whitespace-nowrap">
+            +${shap.toFixed(4)}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const globalFeaturesHtml = features
+    .slice(0, 5)
+    .map(feature => {
+      const value = Math.abs(
+        Number(feature.mean_abs_shap || 0)
+      );
+
+      const width = Math.max(
+        4,
+        (value / maxShap) * 100
+      );
+
+      return `
+        <div class="mb-2">
+          <div class="flex justify-between text-[10px] mb-1">
+            <span class="text-gray-400">
+              ${feature.feature}
+            </span>
+
+            <span class="font-mono text-cyan-400">
+              ${value.toFixed(4)}
+            </span>
+          </div>
+
+          <div class="w-full bg-slate-800 rounded-full h-1.5">
+            <div
+              class="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full"
+              style="width: ${width}%"
+            ></div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const cellLocation = `
+    ${Number(selectedCell.latitude).toFixed(2)}°N,
+    ${Number(selectedCell.longitude).toFixed(2)}°E
+  `;
+
+
+
+  container.innerHTML = `
+    <div class="space-y-4">
+
+      <!-- Historical context -->
+      <div class="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
+        <div class="text-[10px] uppercase tracking-widest text-cyan-400 font-bold">
+          WHY THIS ALERT?
+        </div>
+
+        <div class="text-[10px] text-gray-500 mt-1 uppercase tracking-wide">
+          Historical ML nowcast • 29 Jul 2020 • 02:00 UTC
+        </div>
+      </div>
+
+      <!-- Model probability -->
+      <div class="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-[10px] uppercase tracking-widest text-gray-500">
+              Model probability
+            </div>
+
+            <div class="text-2xl font-bold text-white mt-1">
+              ${modelProbability.toFixed(2)}%
+            </div>
+          </div>
+
+          <div class="text-right">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500">
+              Explained cell
+            </div>
+
+            <div class="text-xs text-cyan-300 font-mono mt-1">
+              ${cellLocation}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Positive contributors -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="text-xs uppercase tracking-wider text-gray-300 font-bold">
+            Model contributors
+          </h4>
+
+          <span class="text-[10px] text-gray-500">
+            Cell-level SHAP
+          </span>
+        </div>
+
+        <div class="rounded-lg border border-slate-800 bg-slate-950/40 px-3">
+          ${
+            positiveHtml ||
+            `
+              <div class="py-3 text-xs text-gray-500">
+                No positive contributors available.
+              </div>
+            `
+          }
+        </div>
+      </div>
+
+      <!-- Storm trajectory -->
+      <div class="rounded-lg border border-orange-500/20 bg-orange-500/5 p-3">
+        <div class="text-[10px] uppercase tracking-widest text-orange-400 font-bold">
+          Storm trajectory
+        </div>
+
+        <div class="text-xs text-gray-300 mt-2 leading-relaxed">
+          ${trajectoryText}
+        </div>
+
+        <div class="text-[10px] text-gray-500 mt-2">
+          The trajectory provides spatial context for the modeled
+          risk region. It is not itself a weather warning.
+        </div>
+      </div>
+
+      <!-- Global SHAP -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="text-xs uppercase tracking-wider text-gray-300 font-bold">
+            Global model contributors
+          </h4>
+
+          <span class="text-[10px] text-gray-500">
+            ${xai.method || "SHAP"}
+          </span>
+        </div>
+
+        <div class="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+          ${globalFeaturesHtml}
+        </div>
+      </div>
+
+      <div class="text-[10px] text-gray-500 leading-relaxed">
+        Contributors describe model attribution for this historical
+        demonstration case. They should not be interpreted as
+        independently verified physical causes.
+      </div>
+
+    </div>
+  `;
 }
 
   // Initialize GIS Interactive Map (Leaflet)
@@ -1127,17 +1603,17 @@ function renderMLForecastGrid(grid) {
     rectangle.addTo(gridLayer);
   });
 
+  const bounds = L.latLngBounds(
+    cells.map(cell => [cell.latitude, cell.longitude])
+  );
+
   gridLayer.addTo(state.map);
   state.mlGridLayer = gridLayer;
+
+  state.map.fitBounds(bounds.pad(0.35), {
+    animate: false
+  });
 }
-
-const bounds = L.latLngBounds(
-  cells.map(cell => [cell.latitude, cell.longitude])
-);
-
-state.map.fitBounds(bounds.pad(0.35), {
-  animate: false
-});
 
   // Render Map Overlays & Risk Polygons
  function renderMapOverlays() {
@@ -1167,6 +1643,31 @@ state.map.fitBounds(bounds.pad(0.35), {
 if (firstForecast?.grid) {
   renderMLForecastGrid(firstForecast.grid);
 }
+
+    // ------------------------------------------------------------
+    // Render geographic high-risk zones for the selected horizon
+    // ------------------------------------------------------------
+
+    const selectedForecast =
+      state.apiData?.forecast?.points?.[
+        state.selectedTimelineHourIndex
+      ] || firstForecast;
+
+    const selectedLeadHours =
+      Number(
+        selectedForecast?.lead_hours ||
+        state.selectedTimelineHourIndex + 1
+      );
+
+    const selectedRiskHorizon =
+      state.apiData?.riskZones?.horizons?.find(
+        horizon =>
+          Number(horizon.lead_hours) === selectedLeadHours
+      );
+
+    if (selectedRiskHorizon) {
+      renderRiskZoneMap(selectedRiskHorizon);
+    }
 
     // Current storm position
     const currentPosition = storm?.current_position || {
