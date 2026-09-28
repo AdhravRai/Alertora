@@ -1,8 +1,116 @@
-.venv/
+# =========================
+# Python
+# =========================
 __pycache__/
-*.pyc
+*.py[cod]
+*.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Jupyter
+# =========================
 .ipynb_checkpoints/
 
+# =========================
+# Data
+# =========================
+data/raw/*
+data/processed/*
+data/samples/*
+
+# Keep folder structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/samples/.gitkeep
+
+# Person B data
 person-b/data/raw/
 person-b/data/processed/*.nc
 person-b/output/*.json
+
+# Large meteorological files
+*.nc
+*.nc4
+*.h5
+*.hdf
+*.grib
+*.grib2
+*.zip
+*.tar
+*.gz
+*.tif
+*.tiff
+
+# =========================
+# ML Models / Artifacts
+# =========================
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.keras
+models/*.pt
+models/*.pth
+models/*.onnx
+
+mlruns/
+mlartifacts/
+wandb/
+runs/
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Python tooling
+# =========================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# =========================
+# IDE / Editors
+# =========================
+.vscode/*
+!.vscode/settings.json
+
+.idea/
+*.swp
+*.swo
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# =========================
+# Local outputs
+# =========================
+outputs/
+results/
