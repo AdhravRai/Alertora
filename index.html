@@ -370,14 +370,17 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Live GIS Weather Map (2 Columns) -->
         <div class="lg:col-span-2 glass-panel p-4 rounded-xl flex flex-col justify-between border-slate-800">
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex flex-wrap items-center justify-between mb-3 gap-2">
             <div class="flex items-center space-x-2">
-              <span class="text-cyan-400 font-bold text-sm font-mono">📡 LIVE GIS RADAR MAP</span>
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-gray-300">DEMO / SIMULATED DATA</span>
+              <span class="text-cyan-400 font-bold text-sm font-mono">📡 LIVE GIS SPATIAL MAP</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">IMDAA DOMAIN (25.08–27.00°N, 82.08–84.00°E) | BASE: 2020-07-29T02:00:00</span>
             </div>
-            <!-- Layer Control Switcher -->
+            <!-- Layer Control Switcher & Replay Button -->
             <div class="flex items-center space-x-1.5 text-[11px] font-mono overflow-x-auto p-1">
-              <button data-layer="radar" class="map-layer-btn map-layer-btn-active px-3 py-1 rounded-lg">Radar</button>
+              <button id="btn-sim-storm" class="bg-cyan-500/20 hover:bg-cyan-500 hover:text-black border border-cyan-500/40 text-cyan-400 font-bold px-3 py-1 rounded-lg transition flex items-center space-x-1 shadow-sm shadow-cyan-500/10">
+                <span>▶ Replay July 29 Trajectory</span>
+              </button>
+              <button data-layer="radar" class="map-layer-btn map-layer-btn-active px-3 py-1 rounded-lg">Radar Track</button>
               <button data-layer="lightning" class="map-layer-btn px-3 py-1 rounded-lg">⚡ Lightning</button>
               <button data-layer="cloudburst" class="map-layer-btn px-3 py-1 rounded-lg">🌧 Cloudburst</button>
               <button data-layer="hail" class="map-layer-btn px-3 py-1 rounded-lg">🧊 Hail Risk</button>

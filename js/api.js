@@ -120,7 +120,43 @@ class AlertoraAPIService {
       timestamp: new Date().toLocaleTimeString()
     };
   }
+  // Fetch Validated July 29 Forecast Data
+  async getForecastJuly29() {
+    try {
+      const response = await fetch("data/processed/alertora_forecast_july29_0200.json");
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+      return await response.json();
+    } catch (err) {
+      console.error("[ALERTORA API] Error fetching July 29 forecast JSON:", err);
+      return null;
+    }
+  }
+
+  // Fetch Validated July 29 Risk Zones
+  async getRiskZonesJuly29() {
+    try {
+      const response = await fetch("data/processed/risk_zones_july29_0200.json");
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+      return await response.json();
+    } catch (err) {
+      console.error("[ALERTORA API] Error fetching July 29 risk zones JSON:", err);
+      return null;
+    }
+  }
+
+  // Fetch Spatial Nowcast Trajectory Output
+  async getNowcastTrajectory() {
+    try {
+      const response = await fetch("person-b/output/nowcast_result.json");
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+      return await response.json();
+    } catch (err) {
+      console.error("[ALERTORA API] Error fetching nowcast result JSON:", err);
+      return null;
+    }
+  }
 }
 
 // Global API instance
 window.alertoraAPI = new AlertoraAPIService();
+
