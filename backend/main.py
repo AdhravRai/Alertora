@@ -18,6 +18,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend.models import LocationProfile, AlertItem, EOCDistrictRow
 from backend.ml_handoff import DEVELOPMENT_FIXTURE
@@ -33,7 +35,18 @@ app = FastAPI(
     version="2.4.0",
 )
 
+BASE_DIR = Path(__file__).resolve().parents[1]
+app.mount(
+    "/css",
+    StaticFiles(directory=BASE_DIR / "css"),
+    name="css",
+)
 
+app.mount(
+    "/js",
+    StaticFiles(directory=BASE_DIR / "js"),
+    name="js",
+)
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
@@ -53,12 +66,7 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {
-        "app": "ALERTORA AI",
-        "tagline": "Predict Early. Prepare Smart. Save Lives.",
-        "status": "ONLINE",
-        "sih_problem": "SIH26084",
-    }
+    return FileResponse(BASE_DIR / "index.html")
 
 
 # ---------------------------------------------------------------------------

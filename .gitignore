@@ -1,0 +1,86 @@
+# =========================================================
+# Python
+# =========================================================
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+
+# =========================================================
+# IDE / OS
+# =========================================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =========================================================
+# Raw meteorological data
+# =========================================================
+data/raw/
+
+# Large scientific / meteorological files
+*.nc
+*.nc4
+*.h5
+*.hdf
+*.grib
+*.grib2
+*.tif
+*.tiff
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.7z
+
+# =========================================================
+# Generated / temporary data
+# =========================================================
+outputs/
+results/
+logs/
+tmp/
+temp/
+
+# =========================================================
+# ML experiment artifacts
+# =========================================================
+mlruns/
+mlartifacts/
+wandb/
+runs/
+
+# Model artifacts
+*.pkl
+*.joblib
+*.keras
+*.pt
+*.pth
+*.onnx
+
+# =========================================================
+# Python / ML caches
+# =========================================================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# =========================================================
+# Keep selected small processed demo artifacts tracked
+# =========================================================
+# NOTE:
+# data/processed/ is intentionally NOT ignored.
+# The Alertora demo JSON files required by FastAPI
+# must remain available to the deployed application.
