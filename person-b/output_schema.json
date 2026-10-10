@@ -1,0 +1,33 @@
+{
+  "forecast_time": "string",
+  "storms": [
+    {
+      "id": "string",
+      "centroid": {
+        "lat": "number",
+        "lon": "number"
+      },
+      "intensity": "number",
+      "motion": {
+        "speed": "number",
+        "direction": "number"
+      }
+    }
+  ],
+  "trajectory": [
+    {
+      "lead_minutes": "number",
+      "lat": "number",
+      "lon": "number"
+    }
+  ],
+  "hazards": {
+    "heavy_rain": "number",
+    "cloudburst": "number"
+  },
+  "eta": {
+    "target": "string",
+    "minutes": "number",
+    "is_estimate": "boolean"
+  }
+}

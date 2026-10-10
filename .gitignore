@@ -1,86 +1,116 @@
-# =========================================================
+# =========================
 # Python
-# =========================================================
+# =========================
+__pycache__/
+*.py[cod]
+*.class
+
+# Virtual environments
 .venv/
 venv/
 env/
-__pycache__/
-*.py[cod]
-*.pyo
+ENV/
 
-# Environment / secrets
+# =========================
+# Environment / Secrets
+# =========================
 .env
 .env.*
 !.env.example
 
+# =========================
 # Jupyter
+# =========================
 .ipynb_checkpoints/
 
-# =========================================================
-# IDE / OS
-# =========================================================
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
+# =========================
+# Data
+# =========================
+data/raw/*
+data/processed/*
+data/samples/*
 
-# =========================================================
-# Raw meteorological data
-# =========================================================
-data/raw/
+# Keep folder structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/samples/.gitkeep
 
-# Large scientific / meteorological files
+# Person B data
+person-b/data/raw/
+person-b/data/processed/*.nc
+person-b/output/*.json
+
+# Large meteorological files
 *.nc
 *.nc4
 *.h5
 *.hdf
 *.grib
 *.grib2
-*.tif
-*.tiff
-
-# Archives
 *.zip
 *.tar
 *.gz
-*.7z
+*.tif
+*.tiff
 
-# =========================================================
-# Generated / temporary data
-# =========================================================
-outputs/
-results/
-logs/
-tmp/
-temp/
+# =========================
+# ML Models / Artifacts
+# =========================
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.keras
+models/*.pt
+models/*.pth
+models/*.onnx
 
-# =========================================================
-# ML experiment artifacts
-# =========================================================
 mlruns/
 mlartifacts/
 wandb/
 runs/
 
-# Model artifacts
-*.pkl
-*.joblib
-*.keras
-*.pt
-*.pth
-*.onnx
+# =========================
+# Logs
+# =========================
+*.log
+logs/
 
-# =========================================================
-# Python / ML caches
-# =========================================================
+# =========================
+# Python tooling
+# =========================
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 
-# =========================================================
-# Keep selected small processed demo artifacts tracked
-# =========================================================
-# NOTE:
-# data/processed/ is intentionally NOT ignored.
-# The Alertora demo JSON files required by FastAPI
-# must remain available to the deployed application.
+# =========================
+# IDE / Editors
+# =========================
+.vscode/*
+!.vscode/settings.json
+
+.idea/
+*.swp
+*.swo
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# =========================
+# Local outputs
+# =========================
+outputs/
+results/

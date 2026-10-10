@@ -3,27 +3,42 @@
    ========================================================================== */
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // IMDAA Domain Boundary Helper (Latitude: 25.08 to 27.00, Longitude: 82.08 to 84.00)
+  function isInsideImdaaDomain(lat, lon) {
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lon);
+    return (
+      !isNaN(latitude) &&
+      !isNaN(longitude) &&
+      latitude >= 25.08 &&
+      latitude <= 27.00 &&
+      longitude >= 82.08 &&
+      longitude <= 84.00
+    );
+  }
+
   // Application State
   const state = {
     currentView: "landing", // landing, dashboard, map, predictions, alerts, precautions, eoc, mysafety, analytics, fusion, about
-    selectedLocationId: "ml-forecast-region",
+    selectedLocationId: "chennai",
     selectedHazard: "THUNDERSTORM",
-    apiData: {
-  systemStatus: null,
-  currentRisk: null,
-  forecast: null,
-  storms: null,
-  alerts: null,
-  explainability: null
-},
     selectedTimelineHourIndex: 0,
+    selectedHorizonIndex: 0, // 0 = +1h, 1 = +2h, ..., 5 = +6h
     activeMapLayer: "radar",
     map: null,
+    fullscreenMap: null,
     radarOverlay: null,
-stormTrajectoryLine: null,
-stormTrajectoryMarkers: [],
-riskPolygons: [],
-mlGridLayer: null,
+    riskPolygons: [],
+    forecastJuly29Data: null,
+    riskZonesJuly29Data: null,
+    nowcastTrajectoryData: null,
+    spatialDataLoaded: false,
+    spatialLayers: {
+      trajectoryPolyline: null,
+      stormMarkers: [],
+      riskZoneRectangles: [],
+      riskCellRectangles: []
+    },
     stormSimulationActive: false,
     stormSimulationInterval: null,
     countdownSeconds: 5076, // 01:24:36
@@ -49,82 +64,57 @@ mlGridLayer: null,
     alerts: document.getElementById("view-alerts"),
     precautions: document.getElementById("view-precautions"),
     eoc: document.getElementById("view-eoc"),
-    analytics: document.getElementById("view-analytics"),
-    mysafety: document.getElementById("view-mysafety")
-};
+    mysafety: document.getElementById("view-mysafety"),
+    analytics: document.getElementById("view-analytics")
+  };
 
   // Initialize Landing Canvas Radar Animation
   initRadarCanvas();
 
-  // Navigation Setup
+  // Load Validated July 29 Spatial Forecast JSON Data
+  async function loadAlertoraSpatialData() {
+    try {
+      if (window.alertoraAPI) {
+        const [forecast, riskZones, trajectory] = await Promise.all([
+          window.alertoraAPI.getForecastJuly29(),
+          window.alertoraAPI.getRiskZonesJuly29(),
+          window.alertoraAPI.getNowcastTrajectory()
+        ]);
+
+        if (forecast) state.forecastJuly29Data = forecast;
+        if (riskZones) state.riskZonesJuly29Data = riskZones;
+        if (trajectory) state.nowcastTrajectoryData = trajectory;
+
+        if (forecast && riskZones) {
+          state.spatialDataLoaded = true;
+          console.log("[Spatial] July 29 forecast & risk zones loaded successfully.");
+        }
+      }
+    } catch (err) {
+      console.error("[Spatial] Error loading spatial JSON data:", err);
+    }
+  }
+
+  // Load Data & Initial Setup
+  await loadAlertoraSpatialData();
+  const locations = await window.alertoraAPI.getLocations();
+  populateLocationSelector(locations);
+  startCountdownTimer();
+  renderNotificationDropdown();
+  startHeaderClock();
+  initMySafetyEventListeners();
   setupNavigation();
 
- // Load Data & Initial Setup
-const locations = await window.alertoraAPI.getLocations();
-
-try {
-const [
-  systemStatus,
-  currentRisk,
-  forecast,
-  storms,
-  alerts,
-  explainability
-] = await Promise.all([
-  window.alertoraAPI.getSystemStatus(),
-  window.alertoraAPI.getCurrentRisk(),
-  window.alertoraAPI.getForecast(),
-  window.alertoraAPI.getStorms(),
-  window.alertoraAPI.getAlerts(),
-  window.alertoraAPI.getExplainability()
-]);
-
-state.apiData.systemStatus = systemStatus;
-state.apiData.currentRisk = currentRisk;
-state.apiData.forecast = forecast;
-state.apiData.storms = storms;
-state.apiData.alerts = alerts;
-state.apiData.explainability = explainability;
-
-// Load risk zones separately so a zone request failure
-// cannot break the existing ML forecast dashboard.
-try {
-  state.apiData.riskZones =
-    await window.alertoraAPI.getRiskZones();
-
-  console.log(
-    "[ALERTORA] Risk-zone data loaded:",
-    state.apiData.riskZones
-  );
-} catch (error) {
-  console.warn(
-    "[ALERTORA] Risk-zone data unavailable:",
-    error
-  );
-
-  state.apiData.riskZones = null;
-}
-
-console.log(
-  "[ALERTORA] FastAPI product data loaded:",
-  state.apiData
-);
-} catch (error) {
-  console.error("[ALERTORA] Failed to load FastAPI product data:", error);
-}
-
-populateLocationSelector(locations);
-startCountdownTimer();
-renderNotificationDropdown();
-startHeaderClock();
-initMySafetyEventListeners();
-
-  // Button Listeners
   document.getElementById("btn-launch-dashboard").addEventListener("click", () => switchView("dashboard"));
   const btnExploreHow = document.getElementById("btn-explore-how");
   if (btnExploreHow) {
     btnExploreHow.addEventListener("click", () => {
-      switchView("dashboard");
+      const cardsSection = document.querySelector(".grid.grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-4");
+      if (cardsSection) {
+        cardsSection.scrollIntoView({ behavior: "smooth" });
+      } else {
+        switchView("analytics");
+      }
     });
   }
   const btnSimStorm = document.getElementById("btn-sim-storm");
@@ -479,8 +469,8 @@ initMySafetyEventListeners();
       windSpeed: Math.floor(28 + seed * 22),
       pressure: 1003.8,
       rainfallRate: Math.floor(35 + seed * 45),
-      nextHazardETA: null,
-nextHazardType: "Forecast warning",
+      nextHazardETA: "00h 35m",
+      nextHazardType: "Convective Cell & Rain",
       nowcast: [
         { hour: "NOW", time: "NOW", thunderstorm: thunderstormProb, hail: hailProb, cloudburst: cloudburstProb, lightning: lightningProb, rainfall: Math.floor(35 + seed * 45), wind: Math.floor(28 + seed * 22) },
         { hour: "+1 HR", time: "+1H", thunderstorm: Math.min(100, thunderstormProb + 8), hail: Math.min(100, hailProb + 12), cloudburst: Math.min(100, cloudburstProb + 10), lightning: Math.min(100, lightningProb + 6), rainfall: Math.floor(55 + seed * 45), wind: Math.floor(38 + seed * 22) },
@@ -507,13 +497,6 @@ nextHazardType: "Forecast warning",
 
     document.getElementById("countdown-location").textContent = `⌖ ${gpsLoc.placeName} (${gpsLoc.lat.toFixed(4)}° N, ${gpsLoc.lng.toFixed(4)}° E)`;
     document.getElementById("countdown-hazard-type").textContent = gpsLoc.nextHazardType;
-
-
-    const countdownRiskBadge = document.getElementById("countdown-risk-badge");
-
-if (countdownRiskBadge) {
-  countdownRiskBadge.textContent = `${gpsLoc.currentRisk} RISK`;
-}
 
     // Show GPS status badge and coordinates display
     const statusBadge = document.getElementById("gps-status-badge");
@@ -598,112 +581,8 @@ if (countdownRiskBadge) {
   }
 
   // Update UI Elements with Selected Location Data
-function updateDashboardForLocation(locId) {
-  const baseLoc =
-    ALERTORA_DATA.locations.find(l => l.id === locId) ||
-    ALERTORA_DATA.locations[0];
-
-  const risk = state.apiData.currentRisk;
-  const forecast = state.apiData.forecast;
-  const alerts = state.apiData?.alerts?.alerts || [];
-const activeAlert = alerts[0] || null;
-
-// Update ML Nowcast Summary Card
-const mlRisk = state.apiData?.currentRisk;
-
-const mlProbabilityEl =
-  document.getElementById("ml-nowcast-probability");
-
-const mlHighRainCellsEl =
-  document.getElementById("ml-high-rain-cells");
-
-const mlGridCoverageEl =
-  document.getElementById("ml-grid-coverage");
-
-const countdownRiskBadge =
-  document.getElementById("countdown-risk-badge");
-
-const countdownHazardType =
-  document.getElementById("countdown-hazard-type");
-
-const countdownLocation =
-  document.getElementById("countdown-location");
-
-if (mlRisk) {
-  if (mlProbabilityEl) {
-    mlProbabilityEl.textContent =
-      `${Number(mlRisk.nowcast_probability || 0).toFixed(2)}%`;
-  }
-
-  if (mlHighRainCellsEl) {
-    mlHighRainCellsEl.textContent =
-      `${Number(mlRisk.predicted_high_rain_cells || 0)}`;
-  }
-
-  if (mlGridCoverageEl) {
-    mlGridCoverageEl.textContent =
-      `${Number(mlRisk.total_cells || 0) || 289} cells`;
-  }
-
-  if (countdownRiskBadge) {
-    countdownRiskBadge.textContent =
-      `${mlRisk.risk_level || "UNKNOWN"} RISK`;
-  }
-
-  if (countdownHazardType) {
-    countdownHazardType.textContent =
-      "Heavy Rain Nowcast";
-  }
-
-  if (countdownLocation) {
-    countdownLocation.textContent =
-      `${Number(mlRisk.latitude || 0).toFixed(4)}°N, ` +
-      `${Number(mlRisk.longitude || 0).toFixed(4)}°E`;
-  }
-}
-
-  // Keep the existing UI structure, but override
-  // risk/forecast values with FastAPI fixture data.
-  const loc = {
-    ...baseLoc,
-
-    currentRisk:
-      risk?.risk_level || baseLoc.currentRisk,
-
-      nextHazardETA: activeAlert?.eta || null,
-nextHazardType: activeAlert?.title || "Forecast warning",
-
-   nowcast: forecast?.points
-  ? forecast.points.map((point) => ({
-      time: point.time,
-      hour: point.hour,
-
-      nowcast_probability:
-        point.nowcast_probability ?? 0,
-
-      ml_probability:
-        point.ml_probability ?? 0,
-
-      mean_probability:
-        point.mean_probability ?? 0,
-
-      predicted_high_rain_cells:
-        point.predicted_high_rain_cells ?? 0,
-
-      total_cells:
-        point.total_cells ?? 0,
-
-      lead_hours:
-        point.lead_hours ?? 0,
-
-   storm_position:
-  point.storm_position ?? null,
-
-grid:
-  point.grid ?? null
-    }))
-  : []
-  };
+  function updateDashboardForLocation(locId) {
+    const loc = ALERTORA_DATA.locations.find(l => l.id === locId) || ALERTORA_DATA.locations[0];
 
     // Current metrics
     document.getElementById("location-name-display").textContent = loc.name;
@@ -717,7 +596,10 @@ grid:
     riskBadge.textContent = loc.currentRisk;
     riskBadge.className = `px-3 py-1 rounded-full text-xs font-bold font-mono uppercase border ${getRiskBadgeClass(loc.currentRisk)}`;
 
-   
+    // ETA & Next Event
+    document.getElementById("countdown-location").textContent = loc.name;
+    document.getElementById("countdown-hazard-type").textContent = loc.nextHazardType;
+
     // Render AI Nowcast Timeline
     renderNowcastTimeline(loc.nowcast);
 
@@ -746,421 +628,132 @@ grid:
     }
   }
 
- function renderNowcastTimeline(nowcastData) {
-  const timelineContainer =
-    document.getElementById("nowcast-timeline-bars");
-
-  const hourSelectorContainer =
-    document.getElementById("nowcast-hour-buttons");
-
-  if (!timelineContainer || !hourSelectorContainer) return;
-
-  if (!nowcastData || !nowcastData.length) {
-    timelineContainer.innerHTML = `
-      <div class="text-sm text-gray-400">
-        Forecast data unavailable.
-      </div>
-    `;
-
-    hourSelectorContainer.innerHTML = "";
-
-    renderRiskZonesForHorizon(null);
-
-    return;
-  }
-
-  hourSelectorContainer.innerHTML = "";
-
-  nowcastData.forEach((item, idx) => {
-    const btn = document.createElement("button");
-
-    btn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-      idx === state.selectedTimelineHourIndex
-        ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/30"
-        : "bg-slate-800/80 text-gray-300 hover:bg-slate-700"
-    }`;
-
-    btn.innerHTML = `
-      <span class="block text-[10px] opacity-75">
-        ${item.time || `+${idx + 1}h`}
-      </span>
-      ${item.hour || `+${idx + 1} HR`}
-    `;
-
-    btn.addEventListener("click", () => {
-      state.selectedTimelineHourIndex = idx;
-
-      renderNowcastTimeline(nowcastData);
-
-      const selectedForecast = nowcastData[idx];
-
-      if (selectedForecast?.grid) {
-        renderMLForecastGrid(selectedForecast.grid);
-      }
-    });
-
-    hourSelectorContainer.appendChild(btn);
-  });
-
-  const activeItem =
-    nowcastData[state.selectedTimelineHourIndex] ||
-    nowcastData[0];
-
-  const nowcast =
-    Number(activeItem.nowcast_probability || 0);
-
-  const mlProbability =
-    Number(activeItem.ml_probability || 0);
-
-  const meanProbability =
-    Number(activeItem.mean_probability || 0);
-
-  const highRainCells =
-    Number(activeItem.predicted_high_rain_cells || 0);
-
-  const totalCells =
-    Number(activeItem.total_cells || 0);
-
-  const leadHours =
-    Number(
-      activeItem.lead_hours ||
-      state.selectedTimelineHourIndex + 1
-    );
-
-  timelineContainer.innerHTML = `
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-
-      <div class="glass-panel p-3 rounded-lg border-slate-800">
-        <div class="text-xs text-gray-400">Nowcast Risk</div>
-        <div class="text-2xl font-bold font-mono text-cyan-400 mt-1">
-          ${nowcast.toFixed(2)}%
-        </div>
-
-        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-          <div
-            class="bg-cyan-400 h-1.5 rounded-full"
-            style="width: ${Math.min(100, nowcast)}%"
-          ></div>
-        </div>
-      </div>
-
-      <div class="glass-panel p-3 rounded-lg border-slate-800">
-        <div class="text-xs text-gray-400">ML Probability</div>
-        <div class="text-2xl font-bold font-mono text-blue-400 mt-1">
-          ${mlProbability.toFixed(2)}%
-        </div>
-
-        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-          <div
-            class="bg-blue-400 h-1.5 rounded-full"
-            style="width: ${Math.min(100, mlProbability)}%"
-          ></div>
-        </div>
-      </div>
-
-      <div class="glass-panel p-3 rounded-lg border-slate-800">
-        <div class="text-xs text-gray-400">Mean Grid Risk</div>
-        <div class="text-2xl font-bold font-mono text-indigo-400 mt-1">
-          ${meanProbability.toFixed(2)}%
-        </div>
-
-        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-          <div
-            class="bg-indigo-400 h-1.5 rounded-full"
-            style="width: ${Math.min(100, meanProbability)}%"
-          ></div>
-        </div>
-      </div>
-
-      <div class="glass-panel p-3 rounded-lg border-slate-800">
-        <div class="text-xs text-gray-400">High-Rain Cells</div>
-
-        <div class="text-2xl font-bold font-mono text-orange-400 mt-1">
-          ${highRainCells}
-        </div>
-
-        <div class="text-[10px] text-gray-500 mt-2">
-          Predicted high-rain locations
-        </div>
-      </div>
-
-      <div class="glass-panel p-3 rounded-lg border-slate-800">
-        <div class="text-xs text-gray-400">Grid Coverage</div>
-
-        <div class="text-2xl font-bold font-mono text-emerald-400 mt-1">
-          ${totalCells}
-        </div>
-
-        <div class="text-[10px] text-gray-500 mt-2">
-          Spatial forecast cells
-        </div>
-      </div>
-
-      <div class="glass-panel p-3 rounded-lg border-slate-800">
-        <div class="text-xs text-gray-400">Lead Time</div>
-
-        <div class="text-2xl font-bold font-mono text-amber-400 mt-1">
-          +${leadHours}h
-        </div>
-
-        <div class="text-[10px] text-gray-500 mt-2">
-          Trajectory-based nowcast
-        </div>
-      </div>
-
-    </div>
-  `;
-
-  // Render the geographic risk zones for the selected horizon.
-  renderRiskZonesForHorizon(leadHours);
-}
-
-function renderRiskZonesForHorizon(leadHours) {
-  const container =
-    document.getElementById("risk-zones-container");
-
-  const horizonLabel =
-    document.getElementById("risk-zone-horizon-label");
-
-  const riskData =
-    state.apiData?.riskZones;
-
-  if (!container) return;
-
-  if (!leadHours || !riskData?.horizons?.length) {
-    container.innerHTML = `
-      <div class="text-xs text-gray-500 font-mono">
-        Risk-zone data unavailable.
-      </div>
-    `;
-
-    if (horizonLabel) {
-      horizonLabel.textContent = "+--";
-    }
-
-    return;
-  }
-
-  const horizon =
-    riskData.horizons.find(
-      item =>
-        Number(item.lead_hours) === Number(leadHours)
-    );
-
-  if (!horizon) {
-    container.innerHTML = `
-      <div class="text-xs text-gray-500 font-mono">
-        No risk zones available for +${leadHours}h.
-      </div>
-    `;
-
-    return;
-  }
-
-  const zones = horizon.zones || [];
-
-  if (horizonLabel) {
-    horizonLabel.textContent = `+${leadHours}H`;
-  }
-
-  if (!zones.length) {
-    container.innerHTML = `
-      <div class="text-xs text-gray-500 font-mono">
-        No geographic high-risk zones detected for +${leadHours}h.
-      </div>
-    `;
-
-    renderRiskZoneMap(horizon);
-    return;
-  }
-
-  container.innerHTML = zones
-    .map(zone => {
-      const peakProbability =
-        Number(zone.peak_probability || 0) * 100;
-
-      const meanProbability =
-        Number(zone.mean_probability || 0) * 100;
-
-      const centerLat =
-        Number(zone.center?.latitude);
-
-      const centerLon =
-        Number(zone.center?.longitude);
-
-      const distanceKm =
-        Number(
-          zone.storm_relation?.distance_km
-        );
-
-      return `
-        <div class="rounded-xl border border-orange-500/30 bg-orange-950/10 p-4">
-
-          <div class="flex items-center justify-between mb-3">
-
-            <div class="font-mono font-bold text-white">
-              ${zone.zone_id}
-            </div>
-
-            <span class="px-2 py-0.5 rounded text-[10px]
-                         font-mono font-bold
-                         bg-orange-950 text-orange-400
-                         border border-orange-500/40">
-              ${zone.risk_level}
-            </span>
-
-          </div>
-
-          <div class="grid grid-cols-2 gap-3 text-xs font-mono">
-
-            <div>
-              <div class="text-gray-500">
-                Affected Cells
-              </div>
-
-              <div class="text-orange-300 font-bold mt-1">
-                ${zone.affected_cells}
-              </div>
-            </div>
-
-            <div>
-              <div class="text-gray-500">
-                Forecast Horizon
-              </div>
-
-              <div class="text-cyan-300 font-bold mt-1">
-                +${zone.horizon_hours}h
-              </div>
-            </div>
-
-            <div>
-              <div class="text-gray-500">
-                Peak Probability
-              </div>
-
-              <div class="text-emerald-300 font-bold mt-1">
-                ${peakProbability.toFixed(2)}%
-              </div>
-            </div>
-
-            <div>
-              <div class="text-gray-500">
-                Mean Probability
-              </div>
-
-              <div class="text-blue-300 font-bold mt-1">
-                ${meanProbability.toFixed(2)}%
-              </div>
-            </div>
-
-          </div>
-
-          <div class="mt-3 pt-3 border-t border-slate-800">
-
-            <div class="text-[10px] text-gray-500 font-mono">
-              ZONE CENTER
-            </div>
-
-            <div class="text-xs text-cyan-300 font-mono mt-1">
-              ${centerLat.toFixed(3)}°N,
-              ${centerLon.toFixed(3)}°E
-            </div>
-
-            <div class="text-[10px] text-gray-500 font-mono mt-2">
-              STORM RELATION
-            </div>
-
-            <div class="text-xs text-orange-300 font-mono mt-1">
-              ${distanceKm.toFixed(2)} km from projected storm position
-            </div>
-
-          </div>
-
-        </div>
-      `;
-    })
-    .join("");
-
-  renderRiskZoneMap(horizon);
-}
-
-function renderRiskZoneMap(horizon) {
-  if (!state.map) return;
-
-  // Remove previously rendered risk-zone layers.
-  if (!state.riskZoneLayers) {
-    state.riskZoneLayers = [];
-  }
-
-  state.riskZoneLayers.forEach(layer => {
-    if (state.map.hasLayer(layer)) {
-      state.map.removeLayer(layer);
-    }
-  });
-
-  state.riskZoneLayers = [];
-
-  const zones = horizon?.zones || [];
-
-  zones.forEach(zone => {
-    const box = zone.bounding_box;
-
-    if (
-      !box ||
-      !Number.isFinite(Number(box.min_latitude)) ||
-      !Number.isFinite(Number(box.max_latitude)) ||
-      !Number.isFinite(Number(box.min_longitude)) ||
-      !Number.isFinite(Number(box.max_longitude))
-    ) {
-      return;
-    }
-
-    const bounds = [
-      [
-        Number(box.min_latitude),
-        Number(box.min_longitude)
-      ],
-      [
-        Number(box.max_latitude),
-        Number(box.max_longitude)
-      ]
+  // Render AI Nowcast Timeline (0-6 Hours)
+  function renderNowcastTimeline(nowcastData) {
+    const timelineContainer = document.getElementById("nowcast-timeline-bars");
+    const hourSelectorContainer = document.getElementById("nowcast-hour-buttons");
+
+    if (!timelineContainer || !hourSelectorContainer) return;
+
+    // Standard 6-Hour Horizon list for July 29 forecast
+    const horizons = [
+      { time: "03:00 UTC", hour: "+1 HR", index: 0, leadHours: 1 },
+      { time: "04:00 UTC", hour: "+2 HR", index: 1, leadHours: 2 },
+      { time: "05:00 UTC", hour: "+3 HR", index: 2, leadHours: 3 },
+      { time: "06:00 UTC", hour: "+4 HR", index: 3, leadHours: 4 },
+      { time: "07:00 UTC", hour: "+5 HR", index: 4, leadHours: 5 },
+      { time: "08:00 UTC", hour: "+6 HR", index: 5, leadHours: 6 }
     ];
 
-    const peakProbability =
-      Number(zone.peak_probability || 0) * 100;
+    hourSelectorContainer.innerHTML = "";
+    horizons.forEach((item) => {
+      const btn = document.createElement("button");
+      btn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+        item.index === state.selectedHorizonIndex
+          ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/30 font-bold"
+          : "bg-slate-800/80 text-gray-300 hover:bg-slate-700"
+      }`;
+      btn.innerHTML = `<span class="block text-[10px] opacity-75">${item.time}</span>${item.hour}`;
+      btn.addEventListener("click", () => {
+        state.selectedHorizonIndex = item.index;
+        state.selectedTimelineHourIndex = item.index;
+        renderNowcastTimeline(nowcastData);
+        if (state.map) renderRealSpatialForecast(state.map);
+        if (state.fullscreenMap) renderRealSpatialForecast(state.fullscreenMap);
+      });
+      hourSelectorContainer.appendChild(btn);
+    });
 
-    const meanProbability =
-      Number(zone.mean_probability || 0) * 100;
+    let maxProb = 71.5;
+    let meanProb = 23.6;
+    let highRainCells = 114;
+    let zoneCount = 1;
+    let stormLat = 26.27;
+    let stormLon = 83.15;
 
-    const rectangle = L.rectangle(
-      bounds,
-      {
-        color: "#f97316",
-        weight: 2,
-        opacity: 0.95,
-        fillColor: "#f97316",
-        fillOpacity: 0.14,
-        dashArray: "6 4"
+    const selectedLeadHours = state.selectedHorizonIndex + 1;
+
+    if (state.forecastJuly29Data && state.forecastJuly29Data.horizons) {
+      const hObj = state.forecastJuly29Data.horizons.find(h => Number(h.lead_hours) === selectedLeadHours);
+      if (hObj) {
+        if (hObj.summary) {
+          maxProb = Math.round(hObj.summary.maximum_probability * 100);
+          meanProb = Math.round(hObj.summary.mean_probability * 100);
+          highRainCells = hObj.summary.predicted_high_rain_cells;
+        }
+        if (hObj.storm_position) {
+          stormLat = hObj.storm_position.latitude;
+          stormLon = hObj.storm_position.longitude;
+        }
       }
-    ).addTo(state.map);
+    }
 
-    rectangle.bindTooltip(
-      `
-        <strong>HIGH-RISK ZONE ${zone.zone_id}</strong><br>
-        Horizon: +${zone.horizon_hours}h<br>
-        Affected Cells: ${zone.affected_cells}<br>
-        Peak Probability: ${peakProbability.toFixed(2)}%<br>
-        Mean Probability: ${meanProbability.toFixed(2)}%<br>
-        Risk Level: ${zone.risk_level}
-      `,
-      {
-        direction: "top"
-      }
-    );
+    if (state.riskZonesJuly29Data && state.riskZonesJuly29Data.horizons) {
+      const rObj = state.riskZonesJuly29Data.horizons.find(h => Number(h.lead_hours) === selectedLeadHours);
+      if (rObj) zoneCount = rObj.zone_count || (rObj.zones ? rObj.zones.length : 1);
+    }
 
-    state.riskZoneLayers.push(rectangle);
-  });
-}
+    const currentHorizonLabel = `+${selectedLeadHours}h`;
+
+    timelineContainer.innerHTML = `
+      <div class="mb-3 text-xs font-mono text-cyan-300 flex flex-wrap items-center justify-between border-b border-slate-800/80 pb-2">
+        <span class="flex items-center space-x-1.5">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+          <span><b>Forecast Base Time:</b> 2020-07-29T02:00:00 UTC</span>
+        </span>
+        <span><b>Selected Horizon:</b> <span class="text-white font-bold">${currentHorizonLabel}</span> | <b>Connected Risk Zones:</b> <span class="text-red-400 font-bold">${zoneCount}</span> | <b>Storm:</b> ${stormLat.toFixed(2)}°N, ${stormLon.toFixed(2)}°E</span>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 font-mono">
+        <div class="glass-panel p-3 rounded-lg border-slate-800">
+          <div class="text-xs text-gray-400">Peak Risk Prob</div>
+          <div class="text-2xl font-bold font-mono text-cyan-400 mt-1">${maxProb}%</div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+            <div class="bg-cyan-400 h-1.5 rounded-full" style="width: ${maxProb}%"></div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-3 rounded-lg border-slate-800">
+          <div class="text-xs text-gray-400">Mean Risk Prob</div>
+          <div class="text-2xl font-bold font-mono text-amber-400 mt-1">${meanProb}%</div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+            <div class="bg-amber-400 h-1.5 rounded-full" style="width: ${meanProb}%"></div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-3 rounded-lg border-slate-800">
+          <div class="text-xs text-gray-400">High-Rain Cells</div>
+          <div class="text-2xl font-bold font-mono text-orange-400 mt-1">${highRainCells}</div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+            <div class="bg-orange-400 h-1.5 rounded-full" style="width: ${Math.min(100, Math.round((highRainCells / 289) * 100))}%"></div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-3 rounded-lg border-slate-800">
+          <div class="text-xs text-gray-400">Active Risk Zones</div>
+          <div class="text-2xl font-bold font-mono text-red-400 mt-1">${zoneCount}</div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+            <div class="bg-red-400 h-1.5 rounded-full" style="width: ${zoneCount * 25}%"></div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-3 rounded-lg border-slate-800">
+          <div class="text-xs text-gray-400">Grid Domain</div>
+          <div class="text-xl font-bold font-mono text-blue-400 mt-1">17x17 Cells</div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+            <div class="bg-blue-400 h-1.5 rounded-full" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-3 rounded-lg border-slate-800">
+          <div class="text-xs text-gray-400">Model Source</div>
+          <div class="text-xl font-bold font-mono text-indigo-400 mt-1">IMDAA ML</div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+            <div class="bg-indigo-400 h-1.5 rounded-full" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
   // Render 4 Hazard Cards
   function renderHazardCards(loc) {
@@ -1203,321 +796,289 @@ function renderRiskZoneMap(horizon) {
     });
   }
 
-function renderXAIPanel() {
-  const container = document.getElementById("xai-factors-container");
-  if (!container) return;
+  // Render Explainable AI Factor Contributions
+  function renderXAIPanel() {
+    const container = document.getElementById("xai-factors-container");
+    if (!container) return;
 
-  const xai = state.apiData?.explainability;
-  const features = xai?.global_top_features || [];
-  const cellExplanations = xai?.cell_explanations || [];
-
-  container.innerHTML = "";
-
-  if (!features.length || !cellExplanations.length) {
-    container.innerHTML = `
-      <div class="text-xs text-gray-400">
-        Explainability data unavailable.
-      </div>
-    `;
-    return;
+    container.innerHTML = "";
+    ALERTORA_DATA.xaiFactors.forEach(f => {
+      const row = document.createElement("div");
+      row.className = "mb-3";
+      row.innerHTML = `
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-gray-300 font-medium">${f.factor}</span>
+          <span class="font-mono text-cyan-400 font-bold">+${f.weight}% Contribution</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-2">
+          <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full" style="width: ${f.weight * 2.5}%"></div>
+        </div>
+        <div class="text-[10px] text-gray-400 mt-0.5">${f.description}</div>
+      `;
+      container.appendChild(row);
+    });
   }
 
-  // Use the highest-probability explained cell from the real SHAP output.
-  const selectedCell = [...cellExplanations].sort(
-    (a, b) =>
-      Number(b.model_probability || 0) -
-      Number(a.model_probability || 0)
-  )[0];
+  // Clear Previous Spatial Layers
+  function clearSpatialLayers(mapInstance) {
+    if (!mapInstance) return;
 
-  const positiveFeatures =
-    selectedCell.top_positive_features || [];
+    if (state.spatialLayers.domainRect) {
+      try { mapInstance.removeLayer(state.spatialLayers.domainRect); } catch (e) {}
+    }
+    if (state.spatialLayers.trajectoryPolyline) {
+      try { mapInstance.removeLayer(state.spatialLayers.trajectoryPolyline); } catch (e) {}
+    }
+    if (state.spatialLayers.stormMarkers && state.spatialLayers.stormMarkers.length) {
+      state.spatialLayers.stormMarkers.forEach(m => {
+        try { mapInstance.removeLayer(m); } catch (e) {}
+      });
+      state.spatialLayers.stormMarkers = [];
+    }
+    if (state.spatialLayers.riskZoneRectangles && state.spatialLayers.riskZoneRectangles.length) {
+      state.spatialLayers.riskZoneRectangles.forEach(r => {
+        try { mapInstance.removeLayer(r); } catch (e) {}
+      });
+      state.spatialLayers.riskZoneRectangles = [];
+    }
+    if (state.spatialLayers.riskCellRectangles && state.spatialLayers.riskCellRectangles.length) {
+      state.spatialLayers.riskCellRectangles.forEach(c => {
+        try { mapInstance.removeLayer(c); } catch (e) {}
+      });
+      state.spatialLayers.riskCellRectangles = [];
+    }
+  }
 
-  const maxShap = Math.max(
-    ...features.map(
-      f => Math.abs(Number(f.mean_abs_shap || 0))
-    ),
-    0.000001
-  );
+  // Render Real Spatial Forecast (July 29 02:00 UTC) on Leaflet Map
+  function renderRealSpatialForecast(mapInstance) {
+    if (!mapInstance) return;
+    clearSpatialLayers(mapInstance);
 
-  const modelProbability =
-    Number(selectedCell.model_probability || 0) * 100;
+    // 1. Render IMDAA Domain Boundary Box (25.08 to 27.00 N, 82.08 to 84.00 E)
+    const domainRect = L.rectangle([[25.08, 82.08], [27.00, 84.00]], {
+      color: "#06b6d4",
+      weight: 1.5,
+      dashArray: "4, 4",
+      fill: false,
+      opacity: 0.6
+    }).addTo(mapInstance);
+    domainRect.bindTooltip("<b>IMDAA Domain</b><br>Lat: 25.08–27.00°N<br>Lon: 82.08–84.00°E", { permanent: false, direction: "top" });
+    state.spatialLayers.domainRect = domainRect;
 
-    // Existing storm trajectory data from the FastAPI /api/storms endpoint.
-  const storm =
-    state.apiData?.storms?.storms?.[0] || null;
+    if (!state.forecastJuly29Data) return;
 
-  const currentPosition =
-    storm?.current_position || null;
+    const forecast = state.forecastJuly29Data;
+    const basePos = forecast.storm ? forecast.storm.current_position : null;
+    const horizons = forecast.horizons || [];
 
-  const trajectoryText = currentPosition
-    ? `
-      Storm trajectory is being used as spatial context for the
-      modeled risk region. Current storm position:
-      ${Number(currentPosition.latitude).toFixed(2)}°N,
-      ${Number(currentPosition.longitude).toFixed(2)}°E.
-    `
-    : `
-      Storm trajectory data is available on the historical GIS map,
-      but the current storm position is unavailable for this panel.
-    `;
+    // 2. Build Real Trajectory Points
+    const validPoints = [];
+    if (basePos && isInsideImdaaDomain(basePos.latitude, basePos.longitude)) {
+      validPoints.push({
+        lat: basePos.latitude,
+        lon: basePos.longitude,
+        label: "Base 02:00",
+        leadHours: 0
+      });
+    }
 
-  const positiveHtml = positiveFeatures
-    .slice(0, 5)
-    .map(feature => {
-      const shap = Number(feature.shap_value || 0);
-      const value = Number(feature.value || 0);
+    horizons.forEach(h => {
+      if (h.storm_position && isInsideImdaaDomain(h.storm_position.latitude, h.storm_position.longitude)) {
+        validPoints.push({
+          lat: h.storm_position.latitude,
+          lon: h.storm_position.longitude,
+          label: `+${h.lead_hours}h`,
+          leadHours: h.lead_hours
+        });
+      }
+    });
 
-      return `
-        <div class="flex items-center justify-between gap-3 py-2 border-b border-slate-800 last:border-0">
-          <div class="min-w-0">
-            <div class="text-xs text-gray-200 font-medium truncate">
-              ${feature.feature}
-            </div>
-            <div class="text-[10px] text-gray-500 font-mono">
-              value: ${Number.isFinite(value) ? value.toFixed(3) : "N/A"}
-            </div>
-          </div>
+    // Draw Chronological Storm Trajectory Polyline
+    const latLngs = validPoints.map(p => [p.lat, p.lon]);
+    if (latLngs.length > 1) {
+      const polyline = L.polyline(latLngs, {
+        color: "#06b6d4",
+        weight: 3.5,
+        dashArray: "6, 6",
+        opacity: 0.9
+      }).addTo(mapInstance);
+      state.spatialLayers.trajectoryPolyline = polyline;
+    }
 
-          <div class="text-xs font-mono font-bold text-emerald-400 whitespace-nowrap">
-            +${shap.toFixed(4)}
-          </div>
-        </div>
-      `;
-    })
-    .join("");
+    // Selected Horizon (1 to 6)
+    const selectedLeadHours = (state.selectedHorizonIndex || 0) + 1;
 
-  const globalFeaturesHtml = features
-    .slice(0, 5)
-    .map(feature => {
-      const value = Math.abs(
-        Number(feature.mean_abs_shap || 0)
-      );
+    // Draw Trajectory Position Markers
+    validPoints.forEach(p => {
+      const isSelected = p.leadHours === selectedLeadHours;
+      let iconHtml = `<div class="flex items-center justify-center bg-cyan-500 text-black font-mono font-bold text-[10px] rounded-full border border-white shadow-md" style="width:26px; height:26px;">${p.label}</div>`;
 
-      const width = Math.max(
-        4,
-        (value / maxShap) * 100
-      );
-
-      return `
-        <div class="mb-2">
-          <div class="flex justify-between text-[10px] mb-1">
-            <span class="text-gray-400">
-              ${feature.feature}
-            </span>
-
-            <span class="font-mono text-cyan-400">
-              ${value.toFixed(4)}
-            </span>
-          </div>
-
-          <div class="w-full bg-slate-800 rounded-full h-1.5">
-            <div
-              class="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full"
-              style="width: ${width}%"
-            ></div>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-
-  const cellLocation = `
-    ${Number(selectedCell.latitude).toFixed(2)}°N,
-    ${Number(selectedCell.longitude).toFixed(2)}°E
-  `;
-
-
-
-  container.innerHTML = `
-    <div class="space-y-4">
-
-      <!-- Historical context -->
-      <div class="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
-        <div class="text-[10px] uppercase tracking-widest text-cyan-400 font-bold">
-          WHY THIS ALERT?
-        </div>
-
-        <div class="text-[10px] text-gray-500 mt-1 uppercase tracking-wide">
-          Historical ML nowcast • 29 Jul 2020 • 02:00 UTC
-        </div>
-      </div>
-
-      <!-- Model probability -->
-      <div class="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-[10px] uppercase tracking-widest text-gray-500">
-              Model probability
-            </div>
-
-            <div class="text-2xl font-bold text-white mt-1">
-              ${modelProbability.toFixed(2)}%
+      if (isSelected) {
+        iconHtml = `
+          <div class="relative flex items-center justify-center">
+            <span class="animate-ping absolute inline-flex h-10 w-10 rounded-full bg-red-400 opacity-75"></span>
+            <div class="relative flex items-center justify-center bg-red-600 text-white font-mono font-bold text-[11px] rounded-full border-2 border-white shadow-xl shadow-red-500/80" style="width:34px; height:34px;">
+              ⚡ ${p.label}
             </div>
           </div>
+        `;
+      }
 
-          <div class="text-right">
-            <div class="text-[10px] uppercase tracking-widest text-gray-500">
-              Explained cell
-            </div>
+      const stormIcon = L.divIcon({
+        className: 'custom-storm-marker',
+        html: iconHtml,
+        iconSize: isSelected ? [34, 34] : [26, 26],
+        iconAnchor: isSelected ? [17, 17] : [13, 13]
+      });
 
-            <div class="text-xs text-cyan-300 font-mono mt-1">
-              ${cellLocation}
-            </div>
-          </div>
+      const marker = L.marker([p.lat, p.lon], { icon: stormIcon }).addTo(mapInstance);
+      marker.bindTooltip(`
+        <div class="p-1 font-mono text-xs">
+          <b>Storm Forecast Position (${p.label})</b><br>
+          Latitude: ${p.lat.toFixed(4)}° N<br>
+          Longitude: ${p.lon.toFixed(4)}° E
         </div>
-      </div>
+      `, { permanent: isSelected, direction: "top" });
 
-      <!-- Positive contributors -->
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <h4 class="text-xs uppercase tracking-wider text-gray-300 font-bold">
-            Model contributors
-          </h4>
+      state.spatialLayers.stormMarkers.push(marker);
+    });
 
-          <span class="text-[10px] text-gray-500">
-            Cell-level SHAP
-          </span>
-        </div>
+    // 3. Render Real Risk Zones for Selected Horizon from risk_zones_july29_0200.json
+    if (state.riskZonesJuly29Data && state.riskZonesJuly29Data.horizons) {
+      const horizonRiskObj = state.riskZonesJuly29Data.horizons.find(h => Number(h.lead_hours) === selectedLeadHours);
+      if (horizonRiskObj && horizonRiskObj.zones) {
+        horizonRiskObj.zones.forEach(zone => {
+          const bbox = zone.bounding_box;
+          if (!bbox) return;
 
-        <div class="rounded-lg border border-slate-800 bg-slate-950/40 px-3">
-          ${
-            positiveHtml ||
-            `
-              <div class="py-3 text-xs text-gray-500">
-                No positive contributors available.
-              </div>
-            `
+          const minLat = bbox.min_latitude;
+          const maxLat = bbox.max_latitude;
+          const minLon = bbox.min_longitude;
+          const maxLon = bbox.max_longitude;
+
+          // Domain Check
+          if (!isInsideImdaaDomain(minLat, minLon) || !isInsideImdaaDomain(maxLat, maxLon)) {
+            console.warn(`[Spatial] Skipping out-of-domain risk zone: ${zone.zone_id}`);
+            return;
           }
-        </div>
-      </div>
 
-      <!-- Storm trajectory -->
-      <div class="rounded-lg border border-orange-500/20 bg-orange-500/5 p-3">
-        <div class="text-[10px] uppercase tracking-widest text-orange-400 font-bold">
-          Storm trajectory
-        </div>
+          const rect = L.rectangle([[minLat, minLon], [maxLat, maxLon]], {
+            color: "#ef4444",
+            fillColor: "#ef4444",
+            fillOpacity: 0.3,
+            weight: 2
+          }).addTo(mapInstance);
 
-        <div class="text-xs text-gray-300 mt-2 leading-relaxed">
-          ${trajectoryText}
-        </div>
+          const distanceStr = (zone.storm_relation && zone.storm_relation.distance_km)
+            ? `${zone.storm_relation.distance_km.toFixed(1)} km`
+            : "--";
 
-        <div class="text-[10px] text-gray-500 mt-2">
-          The trajectory provides spatial context for the modeled
-          risk region. It is not itself a weather warning.
-        </div>
-      </div>
+          rect.bindTooltip(`
+            <div class="p-2 font-mono text-xs min-w-[210px]">
+              <div class="font-bold text-red-400 border-b border-slate-700 pb-1 mb-1 flex justify-between">
+                <span>⚠️ ${zone.zone_id} (${zone.risk_level})</span>
+                <span>+${selectedLeadHours}h Horizon</span>
+              </div>
+              <div><b>Affected Cells:</b> ${zone.affected_cells}</div>
+              <div><b>Peak Probability:</b> ${(zone.peak_probability * 100).toFixed(1)}%</div>
+              <div><b>Mean Probability:</b> ${(zone.mean_probability * 100).toFixed(1)}%</div>
+              <div><b>Bounding Box:</b> Lat ${minLat}–${maxLat}°N, Lon ${minLon}–${maxLon}°E</div>
+              <div class="text-cyan-300 mt-1"><b>Storm Distance:</b> ${distanceStr}</div>
+            </div>
+          `, { permanent: false, direction: "top" });
 
-      <!-- Global SHAP -->
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <h4 class="text-xs uppercase tracking-wider text-gray-300 font-bold">
-            Global model contributors
-          </h4>
+          state.spatialLayers.riskZoneRectangles.push(rect);
+        });
+      }
+    }
 
-          <span class="text-[10px] text-gray-500">
-            ${xai.method || "SHAP"}
-          </span>
-        </div>
+    // 4. Render High-Risk Grid Cells from alertora_forecast_july29_0200.json
+    const currentHorizonForecast = horizons.find(h => Number(h.lead_hours) === selectedLeadHours);
+    if (currentHorizonForecast && currentHorizonForecast.grid && currentHorizonForecast.grid.cells) {
+      currentHorizonForecast.grid.cells.forEach(cell => {
+        if (cell.predicted_high_rain || cell.nowcast_probability >= 0.5) {
+          if (!isInsideImdaaDomain(cell.latitude, cell.longitude)) return;
 
-        <div class="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-          ${globalFeaturesHtml}
-        </div>
-      </div>
+          const cellHalf = 0.06;
+          const cellRect = L.rectangle([
+            [cell.latitude - cellHalf, cell.longitude - cellHalf],
+            [cell.latitude + cellHalf, cell.longitude + cellHalf]
+          ], {
+            color: "#f97316",
+            fillColor: "#f97316",
+            fillOpacity: 0.35,
+            weight: 0.8
+          }).addTo(mapInstance);
 
-      <div class="text-[10px] text-gray-500 leading-relaxed">
-        Contributors describe model attribution for this historical
-        demonstration case. They should not be interpreted as
-        independently verified physical causes.
-      </div>
+          cellRect.bindTooltip(`
+            <div class="p-1 font-mono text-xs">
+              <b>High Rain Grid Cell (+${selectedLeadHours}h)</b><br>
+              Lat: ${cell.latitude.toFixed(2)}°N, Lon: ${cell.longitude.toFixed(2)}°E<br>
+              Nowcast Prob: ${(cell.nowcast_probability * 100).toFixed(1)}%<br>
+              ML Prob: ${(cell.ml_probability * 100).toFixed(1)}%
+            </div>
+          `, { permanent: false });
 
-    </div>
-  `;
-}
+          state.spatialLayers.riskCellRectangles.push(cellRect);
+        }
+      });
+    }
+  }
 
   // Initialize GIS Interactive Map (Leaflet)
   function initGISMap() {
     const mapElement = document.getElementById("gis-map-container");
-    if (!mapElement || state.map) return;
+    const fullscreenElement = document.getElementById("gis-map-fullscreen");
 
-    // Create Leaflet Map centered on Chennai / Tamil Nadu
-    state.map = L.map("gis-map-container", {
-     center: [26.3267, 82.8067],
-zoom: 8,
-      zoomControl: true
-    });
+    if (mapElement && !state.map) {
+      state.map = L.map("gis-map-container", {
+        center: [26.04, 83.04],
+        zoom: 8,
+        zoomControl: true,
+        preferCanvas: true
+      });
 
-    // Dark Map Tile Layer (CartoDB Dark Matter)
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2yvu_1_f62f658f13e311deee9199e7", {
-      attribution: '&copy; OpenStreetMap, &copy; CARTO',
-      subdomains: "abcd",
-      maxZoom: 20
-    }).addTo(state.map);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2yvu_1_f62f658f13e311deee9199e7", {
+        attribution: '&copy; OpenStreetMap, &copy; CARTO',
+        subdomains: "abcd",
+        maxZoom: 20
+      }).addTo(state.map);
 
-    // Render Location Markers & Risk Polygons
-    renderMapOverlays();
+      state.map.fitBounds([
+        [25.08, 82.08],
+        [27.00, 84.00]
+      ]);
 
+      renderRealSpatialForecast(state.map);
 
-    const legend = L.control({ position: "bottomright" });
+      state.map.on("click", (e) => {
+        const { lat, lng } = e.latlng;
+        openCustomLocationModal(lat.toFixed(4), lng.toFixed(4));
+      });
+    }
 
-legend.onAdd = function () {
-  const div = L.DomUtil.create("div", "ml-risk-legend");
+    if (fullscreenElement && !state.fullscreenMap) {
+      state.fullscreenMap = L.map("gis-map-fullscreen", {
+        center: [26.04, 83.04],
+        zoom: 8,
+        zoomControl: true,
+        preferCanvas: true
+      });
 
-  div.innerHTML = `
-    <div style="
-      background: rgba(15, 23, 42, 0.94);
-      padding: 10px 12px;
-      border-radius: 8px;
-      color: white;
-      font-family: monospace;
-      font-size: 11px;
-      border: 1px solid rgba(100,116,139,0.5);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
-    ">
-      <div style="font-weight:bold; margin-bottom:6px;">
-        ML NOWCAST PROBABILITY
-      </div>
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2yvu_1_f62f658f13e311deee9199e7", {
+        attribution: '&copy; OpenStreetMap, &copy; CARTO',
+        subdomains: "abcd",
+        maxZoom: 20
+      }).addTo(state.fullscreenMap);
 
-      <div style="
-        width: 180px;
-        height: 10px;
-        border-radius: 4px;
-        background: linear-gradient(
-          to right,
-          hsl(220,90%,55%),
-          hsl(165,90%,55%),
-          hsl(110,90%,55%),
-          hsl(55,90%,55%),
-          hsl(20,90%,55%),
-          hsl(0,90%,55%)
-        );
-      "></div>
+      state.fullscreenMap.fitBounds([
+        [25.08, 82.08],
+        [27.00, 84.00]
+      ]);
 
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        margin-top:4px;
-        color:#cbd5e1;
-      ">
-        <span>0%</span>
-        <span>25%</span>
-        <span>50%</span>
-        <span>75%</span>
-        <span>100%</span>
-      </div>
-    </div>
-  `;
+      renderRealSpatialForecast(state.fullscreenMap);
+    }
 
-  return div;
-};
-
-legend.addTo(state.map);
-    // Map Click Listener to pick custom coordinates
-    state.map.on("click", (e) => {
-      const { lat, lng } = e.latlng;
-      openCustomLocationModal(lat.toFixed(4), lng.toFixed(4));
-    });
-
-    // Layer Controls Event Listeners (All 4 Buttons get glowing lighting effect when active)
     document.querySelectorAll(".map-layer-btn").forEach(btn => {
       btn.addEventListener("click", (e) => {
         document.querySelectorAll(".map-layer-btn").forEach(b => {
@@ -1525,242 +1086,72 @@ legend.addTo(state.map);
         });
         btn.classList.add("map-layer-btn-active");
         state.activeMapLayer = btn.dataset.layer;
-        updateMapLayers();
       });
     });
   }
 
-function renderMLForecastGrid(grid) {
-  if (!state.map || !grid || !Array.isArray(grid.cells)) return;
-
-  // Remove previous ML grid
-  if (state.mlGridLayer) {
-    state.map.removeLayer(state.mlGridLayer);
-    state.mlGridLayer = null;
-  }
-
-  const cells = grid.cells;
-
-  if (!cells.length) return;
-
-  const latitudes = [...new Set(
-    cells.map(cell => Number(cell.latitude))
-  )].sort((a, b) => a - b);
-
-  const longitudes = [...new Set(
-    cells.map(cell => Number(cell.longitude))
-  )].sort((a, b) => a - b);
-
-  const latStep = latitudes.length > 1
-    ? Math.abs(latitudes[1] - latitudes[0])
-    : 0.08;
-
-  const lonStep = longitudes.length > 1
-    ? Math.abs(longitudes[1] - longitudes[0])
-    : 0.08;
-
-  const halfLat = latStep / 2;
-  const halfLon = lonStep / 2;
-
-  const gridLayer = L.layerGroup();
-
-  cells.forEach((cell) => {
-    const probability = Math.max(
-      0,
-      Math.min(1, Number(cell.nowcast_probability || 0))
-    );
-
-    const riskPercent = probability * 100;
-
-    // Blue -> Cyan -> Green -> Yellow -> Orange -> Red
-    const hue = Math.max(0, 220 - probability * 220);
-    const fillColor = `hsl(${hue}, 90%, 55%)`;
-
-    const rectangle = L.rectangle(
-      [
-        [
-          Number(cell.latitude) - halfLat,
-          Number(cell.longitude) - halfLon
-        ],
-        [
-          Number(cell.latitude) + halfLat,
-          Number(cell.longitude) + halfLon
-        ]
-      ],
-      {
-        color: fillColor,
-        weight: 1,
-        opacity: 0.45,
-        fillColor: fillColor,
-        fillOpacity: 0.48
-      }
-    );
-
-    rectangle.bindTooltip(`
-      <div style="font-family: monospace">
-        <strong>ML Heavy-Rain Risk</strong><br>
-        Nowcast: ${riskPercent.toFixed(1)}%<br>
-        ML Probability: ${(Number(cell.ml_probability || 0) * 100).toFixed(1)}%<br>
-        Storm Proximity: ${Number(cell.storm_proximity || 0).toFixed(3)}<br>
-        High-Rain Cell: ${cell.predicted_high_rain ? "YES" : "NO"}
-      </div>
-    `);
-
-    rectangle.addTo(gridLayer);
-  });
-
-  const bounds = L.latLngBounds(
-    cells.map(cell => [cell.latitude, cell.longitude])
-  );
-
-  gridLayer.addTo(state.map);
-  state.mlGridLayer = gridLayer;
-
-  state.map.fitBounds(bounds.pad(0.35), {
-    animate: false
-  });
-}
-
   // Render Map Overlays & Risk Polygons
- function renderMapOverlays() {
+  function renderMapOverlays() {
     if (!state.map) return;
 
-    // ============================================================
-    // FastAPI Storm Data
-    // ============================================================
-
-    // Remove previous trajectory if the map is refreshed
-    if (state.stormTrajectoryLine) {
-      state.map.removeLayer(state.stormTrajectoryLine);
-      state.stormTrajectoryLine = null;
-    }
-
-    state.stormTrajectoryMarkers.forEach(marker => {
-      state.map.removeLayer(marker);
-    });
-
-    state.stormTrajectoryMarkers = [];
-
-    // Read storm data supplied by FastAPI
-    const storm = state.apiData?.storms?.storms?.[0] || null;
-
-    const firstForecast = state.apiData?.forecast?.points?.[0];
-
-if (firstForecast?.grid) {
-  renderMLForecastGrid(firstForecast.grid);
-}
-
-    // ------------------------------------------------------------
-    // Render geographic high-risk zones for the selected horizon
-    // ------------------------------------------------------------
-
-    const selectedForecast =
-      state.apiData?.forecast?.points?.[
-        state.selectedTimelineHourIndex
-      ] || firstForecast;
-
-    const selectedLeadHours =
-      Number(
-        selectedForecast?.lead_hours ||
-        state.selectedTimelineHourIndex + 1
-      );
-
-    const selectedRiskHorizon =
-      state.apiData?.riskZones?.horizons?.find(
-        horizon =>
-          Number(horizon.lead_hours) === selectedLeadHours
-      );
-
-    if (selectedRiskHorizon) {
-      renderRiskZoneMap(selectedRiskHorizon);
-    }
-
-    // Current storm position
-    const currentPosition = storm?.current_position || {
-      latitude: 13.12,
-      longitude: 80.18
-    };
-
-    const stormLat = currentPosition.latitude;
-    const stormLng = currentPosition.longitude;
-
-    // ============================================================
-    // Current Storm / Risk Area
-    // ============================================================
-
-    state.radarOverlay = L.circle([stormLat, stormLng], {
+    // Simulated Storm Radar Circle Overlay
+    state.radarOverlay = L.circle([13.12, 80.18], {
       color: "#ef4444",
       fillColor: "#ef4444",
       fillOpacity: 0.35,
       radius: 28000
     }).addTo(state.map);
+    state.radarOverlay.bindTooltip("<b>Storm Core Active</b><br>Reflectivity: 54.2 dBZ", { permanent: false, direction: "top" });
 
-    state.radarOverlay.bindTooltip(
-      "<b>Storm Core Active</b><br>ML Nowcast",
-      {
-        permanent: false,
-        direction: "top"
-      }
-    );
+    // Secondary Moderate Risk Polygon
+    const polygon = L.polygon([
+      [13.25, 79.85],
+      [13.40, 80.15],
+      [13.10, 80.35],
+      [12.90, 80.05]
+    ], {
+      color: "#f97316",
+      fillColor: "#f97316",
+      fillOpacity: 0.2
+    }).addTo(state.map);
+    polygon.bindTooltip("<b>High Convective Risk Zone</b><br>0-6 Hr Forecast Area", { permanent: false });
 
-    // ============================================================
-    // Storm Forecast Trajectory
-    // ============================================================
-
-    if (storm?.trajectory?.length) {
-
-      const trajectoryPoints = [
-        [stormLat, stormLng],
-        ...storm.trajectory.map(point => [
-          point.latitude,
-          point.longitude
-        ])
-      ];
-
-      // Draw predicted path
-      state.stormTrajectoryLine = L.polyline(
-        trajectoryPoints,
-        {
-          color: "#f97316",
-          weight: 4,
-          opacity: 0.85,
-          dashArray: "8 8"
-        }
-      ).addTo(state.map);
-
-      // Add forecast points
-      storm.trajectory.forEach(point => {
-
-        const marker = L.circleMarker(
-          [point.latitude, point.longitude],
-          {
-            radius: 5,
-            color: "#f97316",
-            fillColor: "#f97316",
-            fillOpacity: 0.9,
-            weight: 2
-          }
-        ).addTo(state.map);
-
-        marker.bindTooltip(
-          `<b>Storm Forecast</b><br>${point.time}`,
-          {
-            direction: "top"
-          }
-        );
-
-        state.stormTrajectoryMarkers.push(marker);
+    // Markers for all Tamil Nadu locations
+    ALERTORA_DATA.locations.forEach(loc => {
+      const markerColor = loc.currentRisk === "EXTREME" ? "#ef4444" : (loc.currentRisk === "HIGH" ? "#f97316" : "#f59e0b");
+      
+      const customIcon = L.divIcon({
+        className: 'custom-map-pin',
+        html: `<div style="background-color:${markerColor}; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px ${markerColor}"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
       });
-    }
 
-         // Secondary Moderate Risk Polygon
+      const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(state.map);
 
-    
+      const popupContent = `
+        <div class="p-2 min-w-[200px]">
+          <div class="flex items-center justify-between border-b border-slate-700 pb-1 mb-2">
+            <span class="font-bold text-sm text-cyan-400 font-mono">${loc.name}</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${getRiskBadgeClass(loc.currentRisk)}">${loc.currentRisk}</span>
+          </div>
+          <div class="text-xs space-y-1 text-gray-300">
+            <div><b>Temp:</b> ${loc.temp}°C | <b>Humidity:</b> ${loc.humidity}%</div>
+            <div><b>Rain Intensity:</b> ${loc.rainfallRate} mm/hr</div>
+            <div><b>Next Storm ETA:</b> <span class="text-amber-400 font-mono font-bold">${loc.nextHazardETA}</span></div>
+          </div>
+          <button onclick="window.selectLocationFromMap('${loc.id}')" class="mt-3 w-full bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold py-1 px-2 rounded transition">
+            View Full Nowcast & Precautions
+          </button>
+        </div>
+      `;
 
-    } // <-- THIS closes renderMapOverlays()
+      marker.bindPopup(popupContent);
+    });
+  }
 
-    // Global Map Selection Helper
-    window.selectLocationFromMap = function(locId) {
+  // Global Map Selection Helper
+  window.selectLocationFromMap = function(locId) {
     document.getElementById("location-selector").value = locId;
     handleLocationChange(locId);
     switchView("dashboard");
@@ -1831,76 +1222,58 @@ if (firstForecast?.grid) {
     }, 1000);
   }
 
-  // Interactive Demo Storm Simulation Loop
+  // Replay July 29 Trajectory Sequentially (+1h to +6h)
   function toggleStormSimulation() {
     const btn = document.getElementById("btn-sim-storm");
-    const statusBadge = document.getElementById("header-status-badge");
-    const statusText = document.getElementById("header-status-text");
     const simIndicator = document.getElementById("strip-sim-indicator");
 
     if (state.stormSimulationActive) {
-      clearInterval(state.stormSimulationInterval);
+      if (state.stormSimulationInterval) clearInterval(state.stormSimulationInterval);
       state.stormSimulationActive = false;
 
       if (btn) {
-        btn.innerHTML = `<span>DEMO MODE</span>`;
-        btn.className = "bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 text-xs font-bold font-mono px-3 py-1.5 rounded-lg transition flex items-center shadow-sm shadow-cyan-500/10";
+        btn.innerHTML = `<span>▶ Replay July 29 Trajectory</span>`;
+        btn.className = "bg-cyan-500/20 hover:bg-cyan-500 hover:text-black border border-cyan-500/40 text-cyan-400 font-bold text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center shadow-sm shadow-cyan-500/10";
       }
 
-      if (statusBadge) {
-        statusBadge.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950/90 text-emerald-400 border border-emerald-500/40 flex items-center shadow-sm shadow-emerald-500/20";
-        if (statusText) statusText.textContent = "SYSTEM ONLINE";
-      }
       if (simIndicator) simIndicator.classList.add("hidden");
-
-      showToast("Simulation Paused", "Storm trajectory simulation has been paused.");
+      showToast("Replay Paused", "July 29 trajectory replay has been paused.");
     } else {
       state.stormSimulationActive = true;
+      state.selectedHorizonIndex = 0; // Start at +1h
 
       if (btn) {
-        btn.innerHTML = `<span>STOP SIMULATION</span>`;
+        btn.innerHTML = `<span>⏸ Pause Replay</span>`;
         btn.className = "bg-amber-950/90 text-amber-300 border border-amber-500/50 text-xs font-bold font-mono px-3 py-1.5 rounded-lg transition flex items-center shadow-lg shadow-amber-500/20 animate-pulse";
       }
 
-      if (statusBadge) {
-        statusBadge.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950/90 text-amber-400 border border-amber-500/50 flex items-center shadow-sm shadow-amber-500/20";
-        if (statusText) statusText.textContent = "DEMO / SIMULATED";
-      }
       if (simIndicator) simIndicator.classList.remove("hidden");
 
-      showToast("⛈ STORM SIMULATION RUNNING", "Simulating storm movement across Tamil Nadu over 6 hours.");
+      if (state.map) renderRealSpatialForecast(state.map);
+      if (state.fullscreenMap) renderRealSpatialForecast(state.fullscreenMap);
+      renderNowcastTimeline();
 
-      let simStep = 0;
+      showToast("▶ REPLAYING JULY 29 FORECAST", "Sequentially displaying +1h to +6h validated storm trajectory & risk zones.", "CYAN");
+
       state.stormSimulationInterval = setInterval(() => {
-        simStep++;
-        
-        // Move storm circle overlay
-        if (state.radarOverlay && state.map) {
-          const currentCenter = state.radarOverlay.getLatLng();
-          state.radarOverlay.setLatLng([currentCenter.lat + 0.005, currentCenter.lng + 0.008]);
-          state.radarOverlay.setRadius(28000 + (simStep * 1500));
+        if (state.selectedHorizonIndex < 5) {
+          state.selectedHorizonIndex++;
+          state.selectedTimelineHourIndex = state.selectedHorizonIndex;
+          if (state.map) renderRealSpatialForecast(state.map);
+          if (state.fullscreenMap) renderRealSpatialForecast(state.fullscreenMap);
+          renderNowcastTimeline();
+          showToast("REPLAY", `Showing Horizon +${state.selectedHorizonIndex + 1}h`, "CYAN");
+        } else {
+          clearInterval(state.stormSimulationInterval);
+          state.stormSimulationActive = false;
+          if (btn) {
+            btn.innerHTML = `<span>▶ Replay July 29 Trajectory</span>`;
+            btn.className = "bg-cyan-500/20 hover:bg-cyan-500 hover:text-black border border-cyan-500/40 text-cyan-400 font-bold text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center shadow-sm shadow-cyan-500/10";
+          }
+          if (simIndicator) simIndicator.classList.add("hidden");
+          showToast("REPLAY COMPLETE", "Completed full +1h to +6h historical storm trajectory replay.", "CYAN");
         }
-
-        // Dynamically update nowcast hazard values
-        const currentLoc = (state.selectedLocationId === "gps-current" && state.gpsLocationData) 
-          ? state.gpsLocationData 
-          : ALERTORA_DATA.locations.find(l => l.id === state.selectedLocationId);
-
-        if (currentLoc && currentLoc.nowcast) {
-          currentLoc.nowcast.forEach(item => {
-            item.thunderstorm = Math.min(100, item.thunderstorm + Math.floor(Math.random() * 5));
-            item.lightning = Math.min(100, item.lightning + Math.floor(Math.random() * 6));
-          });
-          renderNowcastTimeline(currentLoc.nowcast);
-          updateHeaderNowcastData(currentLoc);
-        }
-
-        // Show live warning notification at step 3
-        if (simStep === 3) {
-          showToast("🔴 EMERGENCY ALERT GENERATED", "Tiruvallur District: Hail & Lightning strike density exceeded threshold!", "RED");
-          playAlertTone();
-        }
-      }, 2500);
+      }, 1800);
     }
   }
 
@@ -1924,46 +1297,53 @@ if (firstForecast?.grid) {
 
   // Render AI Safety Precautions View
   function renderPrecautionsView(hazardKey) {
+    hazardKey = (hazardKey || state.selectedHazard || "THUNDERSTORM").toUpperCase();
+    state.selectedHazard = hazardKey;
     const hazardData = ALERTORA_DATA.precautionsDatabase[hazardKey] || ALERTORA_DATA.precautionsDatabase["THUNDERSTORM"];
 
     // Update buttons active state
     document.querySelectorAll(".precaution-hazard-btn").forEach(btn => {
       if (btn.dataset.hazard === hazardKey) {
-        btn.classList.add("bg-cyan-500", "text-black", "font-bold");
-        btn.classList.remove("bg-slate-800", "text-gray-300");
+        btn.className = "precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-cyan-500 text-black cursor-pointer transition shadow-md shadow-cyan-500/20";
       } else {
-        btn.classList.remove("bg-cyan-500", "text-black", "font-bold");
-        btn.classList.add("bg-slate-800", "text-gray-300");
+        btn.className = "precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300 hover:text-cyan-400 border border-slate-700 cursor-pointer transition";
       }
     });
 
-    document.getElementById("precaution-hazard-title").textContent = hazardData.hazard;
+    const titleEl = document.getElementById("precaution-hazard-title");
+    if (titleEl) {
+      titleEl.textContent = `${hazardData.hazard} Recommendations`;
+    }
 
     // Render Govt Precautions
     const govtContainer = document.getElementById("precautions-govt-list");
-    govtContainer.innerHTML = "";
-    hazardData.government.forEach((item, i) => {
-      const li = document.createElement("li");
-      li.className = "flex items-start space-x-3 text-sm text-gray-300";
-      li.innerHTML = `
-        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-400 font-bold text-xs flex items-center justify-center font-mono">${i + 1}</span>
-        <span>${item}</span>
-      `;
-      govtContainer.appendChild(li);
-    });
+    if (govtContainer) {
+      govtContainer.innerHTML = "";
+      hazardData.government.forEach((item, i) => {
+        const li = document.createElement("li");
+        li.className = "flex items-start space-x-3 text-xs text-gray-200 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 hover:border-cyan-500/30 transition";
+        li.innerHTML = `
+          <span class="flex-shrink-0 w-5 h-5 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-400 font-bold text-[10px] flex items-center justify-center font-mono">${i + 1}</span>
+          <span>${item}</span>
+        `;
+        govtContainer.appendChild(li);
+      });
+    }
 
     // Render Public Precautions
     const publicContainer = document.getElementById("precautions-public-list");
-    publicContainer.innerHTML = "";
-    hazardData.public.forEach((item, i) => {
-      const li = document.createElement("li");
-      li.className = "flex items-start space-x-3 text-sm text-gray-300";
-      li.innerHTML = `
-        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center font-mono">✓</span>
-        <span>${item}</span>
-      `;
-      publicContainer.appendChild(li);
-    });
+    if (publicContainer) {
+      publicContainer.innerHTML = "";
+      hazardData.public.forEach((item, i) => {
+        const li = document.createElement("li");
+        li.className = "flex items-start space-x-3 text-xs text-gray-200 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 hover:border-emerald-500/30 transition";
+        li.innerHTML = `
+          <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 font-bold text-[10px] flex items-center justify-center font-mono">✓</span>
+          <span>${item}</span>
+        `;
+        publicContainer.appendChild(li);
+      });
+    }
   }
 
   // Render Emergency Alerts View
@@ -1972,9 +1352,7 @@ if (firstForecast?.grid) {
     if (!container) return;
 
     container.innerHTML = "";
-    const alerts = state.apiData?.alerts?.alerts || [];
-
-alerts.forEach(alert => {
+    ALERTORA_DATA.alertsFeed.forEach(alert => {
       const alertCard = document.createElement("div");
       const borderClass = alert.severity === "RED" ? "border-red-500/60 bg-red-950/20" : (alert.severity === "ORANGE" ? "border-orange-500/50 bg-orange-950/20" : "border-yellow-500/40 bg-yellow-950/20");
       
@@ -2227,15 +1605,6 @@ alerts.forEach(alert => {
     });
   }
 
-  // Render Public Safety Mode ("My Safety")
-  function renderMySafetyView() {
-    const loc = ALERTORA_DATA.locations.find(l => l.id === state.selectedLocationId) || ALERTORA_DATA.locations[0];
-
-    document.getElementById("mysafety-loc-name").textContent = loc.name;
-    document.getElementById("mysafety-risk-banner").className = `p-4 rounded-xl border mb-6 flex items-center justify-between ${getRiskBadgeClass(loc.currentRisk)}`;
-    document.getElementById("mysafety-risk-text").textContent = `⚠️ ${loc.currentRisk} ${loc.nextHazardType.toUpperCase()} ALERT`;
-  }
-
 
 
   // Render Analytics Page Charts using Chart.js
@@ -2292,24 +1661,79 @@ alerts.forEach(alert => {
     }
   }
 
-  // Setup Navigation Clicks
+  // Setup Navigation Clicks & Global Actions
   function setupNavigation() {
+    // 1. Navigation Links (Desktop & Mobile Drawer)
     document.querySelectorAll(".nav-link").forEach(link => {
       link.addEventListener("click", (e) => {
         e.preventDefault();
         const targetView = link.dataset.view;
-        switchView(targetView);
+        if (targetView) {
+          switchView(targetView);
+          // Auto close mobile drawer if open
+          const mobileMenu = document.getElementById("header-mobile-menu");
+          if (mobileMenu && !mobileMenu.classList.contains("hidden")) {
+            mobileMenu.classList.add("hidden");
+          }
+        }
       });
     });
 
+    // 2. Precaution Hazard Selection Buttons
     document.querySelectorAll(".precaution-hazard-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        state.selectedHazard = btn.dataset.hazard;
-        renderPrecautionsView(state.selectedHazard);
+        const hazard = btn.dataset.hazard;
+        if (hazard) {
+          state.selectedHazard = hazard.toUpperCase();
+          renderPrecautionsView(state.selectedHazard);
+        }
       });
     });
 
+    // 3. Global Window Helpers
     window.switchAppView = switchView;
+
+    window.selectPrecautionHazard = function(hazardKey) {
+      if (!hazardKey) return;
+      state.selectedHazard = hazardKey.toUpperCase();
+      renderPrecautionsView(state.selectedHazard);
+    };
+
+    window.copyPrecautionSOP = function() {
+      const hazardKey = state.selectedHazard || "THUNDERSTORM";
+      const hazardData = ALERTORA_DATA.precautionsDatabase[hazardKey] || ALERTORA_DATA.precautionsDatabase["THUNDERSTORM"];
+      let text = `ALERTORA AI — STANDARD OPERATING PROCEDURE (SOP)\n`;
+      text += `HAZARD: ${hazardData.hazard}\n\n`;
+      text += `[GOVERNMENT & EOC PROTOCOLS]\n`;
+      hazardData.government.forEach((g, i) => { text += `${i + 1}. ${g}\n`; });
+      text += `\n[PUBLIC CITIZEN ACTION PLAN]\n`;
+      hazardData.public.forEach((p, i) => { text += `${i + 1}. ${p}\n`; });
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast("SOP COPIED", `${hazardData.hazard} Emergency Protocols copied to clipboard`, "CYAN");
+        }).catch(() => {
+          showToast("SOP READY", `${hazardData.hazard} Protocols ready`, "CYAN");
+        });
+      } else {
+        showToast("SOP READY", `${hazardData.hazard} Protocols ready`, "CYAN");
+      }
+    };
+
+    window.triggerPrecautionBroadcast = function() {
+      const hazardKey = state.selectedHazard || "THUNDERSTORM";
+      const district = state.selectedLocationId === "gps-current" && state.gpsLocationData 
+        ? state.gpsLocationData.name 
+        : (ALERTORA_DATA.locations.find(l => l.id === state.selectedLocationId)?.name || "IMDAA Monitored Sector");
+
+      if (window.alertoraAPI && typeof window.alertoraAPI.triggerPublicWarning === "function") {
+        window.alertoraAPI.triggerPublicWarning(district).then(res => {
+          showToast("PUBLIC WARNING DISPATCHED", `Emergency siren & broadcast alert sent to ${district} for ${hazardKey}`, "RED");
+        });
+      } else {
+        showToast("WARNING DISPATCHED", `Emergency advisory broadcast for ${district}`, "RED");
+      }
+    };
   }
 
   // Notification Dropdown Drawer Toggle
@@ -2361,137 +1785,79 @@ alerts.forEach(alert => {
     });
   }
 
-function updateHeaderNowcastData(loc) {
-  if (!loc) return;
+  // Update Header Live Nowcast Strip & Dynamic Header Controls
+  function updateHeaderNowcastData(loc) {
+    if (!loc) return;
 
-  const currentNowcast =
-    loc.nowcast && loc.nowcast.length > 0
-      ? loc.nowcast[0]
-      : null;
+    // Location name
+    const stripLocEl = document.getElementById("strip-loc-name");
+    if (stripLocEl) stripLocEl.textContent = loc.name || loc.placeName || "Selected Location";
 
-  const risk = loc.currentRisk || "UNKNOWN";
-
-  // Location
-  const stripLocEl = document.getElementById("strip-loc-name");
-  if (stripLocEl) {
-    stripLocEl.textContent =
-      state.selectedLocationId === "ml-forecast-region"
-        ? "ML Forecast Region"
-        : (loc.name || loc.placeName || "Selected Location");
-  }
-
-  // Risk badges
-  const riskBadgeClass = getRiskBadgeClass(risk);
-
-  const headerRiskEl =
-    document.getElementById("header-location-risk-badge");
-
-  if (headerRiskEl) {
-    headerRiskEl.textContent = `${risk} RISK`;
-    headerRiskEl.className =
-      `px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${riskBadgeClass}`;
-  }
-
-  const stripRiskEl =
-    document.getElementById("strip-risk-badge");
-
-  if (stripRiskEl) {
-    stripRiskEl.textContent = `${risk} RISK`;
-    stripRiskEl.className =
-      `px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${riskBadgeClass}`;
-  }
-
-  if (currentNowcast) {
-    // ML Nowcast probability
-    const stormEl =
-      document.getElementById("strip-thunderstorm");
-
-    if (stormEl) {
-      stormEl.textContent =
-        `${Number(currentNowcast.nowcast_probability || 0).toFixed(2)}%`;
+    // Risk Badges
+    const riskBadgeClass = getRiskBadgeClass(loc.currentRisk);
+    const headerRiskEl = document.getElementById("header-location-risk-badge");
+    if (headerRiskEl) {
+      headerRiskEl.textContent = `${loc.currentRisk} RISK`;
+      headerRiskEl.className = `px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${riskBadgeClass}`;
     }
 
-    // ML probability
-    const lightEl =
-      document.getElementById("strip-lightning");
-
-    if (lightEl) {
-      lightEl.textContent =
-        `${Number(currentNowcast.ml_probability || 0).toFixed(2)}%`;
+    const stripRiskEl = document.getElementById("strip-risk-badge");
+    if (stripRiskEl) {
+      stripRiskEl.textContent = `${loc.currentRisk} RISK`;
+      stripRiskEl.className = `px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${riskBadgeClass}`;
     }
 
-    // Mean grid probability
-    const cloudEl =
-      document.getElementById("strip-cloudburst");
+    // Dynamic metrics from nowcast[0]
+    const currentNowcast = (loc.nowcast && loc.nowcast.length > 0) ? loc.nowcast[0] : null;
+    if (currentNowcast) {
+      const stormEl = document.getElementById("strip-thunderstorm");
+      if (stormEl) stormEl.textContent = `${currentNowcast.thunderstorm}%`;
 
-    if (cloudEl) {
-      cloudEl.textContent =
-        `${Number(currentNowcast.mean_probability || 0).toFixed(2)}%`;
+      const lightEl = document.getElementById("strip-lightning");
+      if (lightEl) lightEl.textContent = `${currentNowcast.lightning}%`;
+
+      const cloudEl = document.getElementById("strip-cloudburst");
+      if (cloudEl) cloudEl.textContent = `${currentNowcast.cloudburst}%`;
+
+      const hailEl = document.getElementById("strip-hail");
+      if (hailEl) hailEl.textContent = `${currentNowcast.hail}%`;
+
+      const windEl = document.getElementById("strip-wind");
+      if (windEl) windEl.textContent = `${currentNowcast.wind || loc.windSpeed || 38} km/h`;
     }
 
-    // High-rain cells
-    const hailEl =
-      document.getElementById("strip-hail");
-
-    if (hailEl) {
-      hailEl.textContent =
-        `${Number(currentNowcast.predicted_high_rain_cells || 0)}`;
-    }
-
-    // No wind field is present in the ML handoff, so don't fabricate it.
-    const windEl =
-      document.getElementById("strip-wind");
-
-    if (windEl) {
-      windEl.textContent = "N/A";
+    // Visually responsive risk state on Header border
+    const appHeader = document.getElementById("app-header");
+    if (appHeader) {
+      appHeader.classList.remove("border-cyan-500/30", "border-emerald-500/40", "border-yellow-500/40", "border-orange-500/50", "border-red-500/60", "box-glow-red");
+      if (loc.currentRisk === "EXTREME") {
+        appHeader.classList.add("border-b", "border-red-500/60", "box-glow-red");
+      } else if (loc.currentRisk === "HIGH") {
+        appHeader.classList.add("border-b", "border-orange-500/50");
+      } else if (loc.currentRisk === "MODERATE") {
+        appHeader.classList.add("border-b", "border-yellow-500/40");
+      } else {
+        appHeader.classList.add("border-b", "border-emerald-500/40");
+      }
     }
   }
 
-  // Header border state
-  const appHeader =
-    document.getElementById("app-header");
+  // Live Timestamp Clock for Header Strip
+  function startHeaderClock() {
+    const clockEl = document.getElementById("strip-update-clock");
+    if (!clockEl) return;
 
-  if (appHeader) {
-    appHeader.classList.remove(
-      "border-cyan-500/30",
-      "border-emerald-500/40",
-      "border-yellow-500/40",
-      "border-orange-500/50",
-      "border-red-500/60",
-      "box-glow-red"
-    );
-
-    if (risk === "EXTREME") {
-      appHeader.classList.add(
-        "border-b",
-        "border-red-500/60",
-        "box-glow-red"
-      );
-    } else if (risk === "HIGH") {
-      appHeader.classList.add(
-        "border-b",
-        "border-orange-500/50"
-      );
-    } else if (risk === "MODERATE") {
-      appHeader.classList.add(
-        "border-b",
-        "border-yellow-500/40"
-      );
-    } else {
-      appHeader.classList.add(
-        "border-b",
-        "border-emerald-500/40"
-      );
-    }
+    let seconds = 0;
+    setInterval(() => {
+      seconds++;
+      if (seconds < 60) {
+        clockEl.textContent = `LAST UPDATE: ${seconds} sec ago`;
+      } else {
+        const mins = Math.floor(seconds / 60);
+        clockEl.textContent = `LAST UPDATE: ${mins} min ago`;
+      }
+    }, 1000);
   }
-}
-
- function startHeaderClock() {
-  const clockEl = document.getElementById("strip-update-clock");
-  if (!clockEl) return;
-
-  clockEl.textContent = "CASE TIME: 29 JUL 2020 • 02:00 UTC";
-}
 
   // Toast Generator
   function showToast(title, message, severity = "CYAN") {
@@ -2576,6 +1942,119 @@ function updateHeaderNowcastData(loc) {
     draw();
   }
 
+  // ==============================================================================
+  // REAL-TIME SERVER-SENT EVENTS (SSE) INTEGRATION & DYNAMIC UPDATES
+  // ==============================================================================
+  function updateSSEStatusBadge(status) {
+    const badge = document.getElementById("strip-sse-status");
+    const dot = document.getElementById("strip-sse-dot");
+    const text = document.getElementById("strip-sse-text");
+    if (!badge || !dot || !text) return;
+
+    badge.className = "px-2 py-0.5 rounded text-[10px] font-bold border flex items-center space-x-1 whitespace-nowrap transition-colors duration-300 ";
+
+    if (status === "CONNECTED") {
+      badge.className += "bg-emerald-950/90 text-emerald-300 border-emerald-500/50";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse";
+      text.textContent = "SSE: LIVE";
+    } else if (status === "RECONNECTING") {
+      badge.className += "bg-amber-950/90 text-amber-300 border-amber-500/50";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping";
+      text.textContent = "SSE: RECONNECTING";
+    } else {
+      badge.className += "bg-slate-900 text-slate-400 border-slate-700/60";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-slate-500";
+      text.textContent = "SSE: OFFLINE";
+    }
+  }
+
+  function showRealTimeAlertToast(alertData) {
+    const toast = document.createElement("div");
+    toast.className = "fixed bottom-5 right-5 z-50 max-w-md p-4 rounded-xl shadow-2xl border-2 border-red-500/80 bg-slate-950/95 backdrop-blur-md text-white font-mono animate-bounce";
+    toast.innerHTML = `
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-red-600 text-white uppercase">${alertData.severity || 'CRITICAL'} ALERT</span>
+        <span class="text-[11px] text-gray-400">REAL-TIME DISPATCH</span>
+      </div>
+      <div class="font-bold text-sm text-red-200 mb-1">${alertData.title || 'Severe Weather Warning'}</div>
+      <div class="text-xs text-gray-300 mb-2">${alertData.summary || ''}</div>
+      <div class="text-[11px] text-amber-300 mb-2">ETA: ${alertData.eta || 'Immediate'} | Sector: ${alertData.location || alertData.district || 'Domain'}</div>
+      <div class="flex justify-end space-x-2">
+        <button onclick="this.closest('.fixed').remove()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded text-gray-300">Dismiss</button>
+      </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 12000);
+  }
+
+  function setupRealTimeSSE() {
+    if (!window.alertoraAPI) return;
+
+    // Generate or retrieve persistent web client token
+    let clientToken = localStorage.getItem("alertora_device_token");
+    if (!clientToken) {
+      clientToken = "web_" + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem("alertora_device_token", clientToken);
+    }
+
+    // Register device location for geohash targeting
+    const clientLat = state.gpsLocationData ? state.gpsLocationData.lat : 26.04;
+    const clientLng = state.gpsLocationData ? state.gpsLocationData.lng : 83.04;
+    window.alertoraAPI.registerDevice(clientToken, clientLat, clientLng, "web");
+
+    window.alertoraAPI.initSSEConnection({
+      onStateChange: (connectionState) => {
+        updateSSEStatusBadge(connectionState);
+      },
+      onForecastUpdated: (data) => {
+        console.log("[ALERTORA SSE] Convective forecast updated event received:", data);
+        loadJuly29DataAndRenderMap();
+      },
+      onRiskZonesUpdated: (data) => {
+        console.log("[ALERTORA SSE] Risk zones updated event received:", data);
+        loadJuly29DataAndRenderMap();
+      },
+      onStormTrajectoryUpdated: (data) => {
+        console.log("[ALERTORA SSE] Storm trajectory updated event received:", data);
+        loadJuly29DataAndRenderMap();
+      },
+      onAlertCreated: (alertData) => {
+        console.log("[ALERTORA SSE] Real-time emergency alert dispatched:", alertData);
+        if (typeof ALERTORA_DATA !== "undefined" && ALERTORA_DATA.alertsFeed) {
+          ALERTORA_DATA.alertsFeed.unshift({
+            id: alertData.id || "ALT-" + Date.now(),
+            severity: alertData.severity === "CRITICAL" ? "RED" : (alertData.severity === "HIGH" ? "ORANGE" : "YELLOW"),
+            title: alertData.title || "Severe Storm Alert",
+            location: alertData.location || "IMDAA Sector",
+            timestamp: new Date().toLocaleTimeString(),
+            eta: alertData.eta || "20 mins",
+            confidence: alertData.confidence || 90,
+            hazardTypes: alertData.hazardTypes || ["THUNDERSTORM"],
+            summary: alertData.summary || "Severe weather approaching.",
+            action: alertData.action || "Seek immediate shelter."
+          });
+          if (state.currentView === "alerts") {
+            renderAlertsView();
+          }
+        }
+        showRealTimeAlertToast(alertData);
+      },
+      onSystemStatusUpdated: (data) => {
+        console.log("[ALERTORA SSE] System status update:", data);
+      },
+      onHeartbeat: (hb) => {
+        const clockEl = document.getElementById("strip-update-clock");
+        if (clockEl) {
+          clockEl.textContent = `LAST SYNC: ${new Date().toLocaleTimeString()}`;
+        }
+      }
+    });
+  }
+
+  // Initialize Real-Time SSE
+  setupRealTimeSSE();
+
   // Set default view
-  switchView("landing");
+  switchView("dashboard");
 });
+
