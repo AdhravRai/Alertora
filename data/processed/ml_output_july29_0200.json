@@ -1,0 +1,2445 @@
+{
+  "product": "ALERTORA_ML_CONVECTIVE_RISK",
+  "version": "1.0",
+  "forecast": {
+    "base_time": "2020-07-29T02:00:00",
+    "forecast_time": "2020-07-29T03:00:00",
+    "horizon_minutes": 60
+  },
+  "grid": {
+    "rows": 17,
+    "columns": 17,
+    "latitudes": [
+      25.08,
+      25.2,
+      25.32,
+      25.44,
+      25.559999999999995,
+      25.68,
+      25.8,
+      25.92,
+      26.04,
+      26.16,
+      26.28,
+      26.4,
+      26.52,
+      26.64,
+      26.76,
+      26.879999999999995,
+      27.0
+    ],
+    "longitudes": [
+      82.08,
+      82.19999999999999,
+      82.32,
+      82.44,
+      82.56,
+      82.68,
+      82.8,
+      82.91999999999999,
+      83.03999999999999,
+      83.16,
+      83.28,
+      83.4,
+      83.52,
+      83.64,
+      83.75999999999999,
+      83.88,
+      84.0
+    ],
+    "cells": [
+      {
+        "latitude": 25.08,
+        "longitude": 82.08,
+        "probability": 0.05592,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 82.19999999999999,
+        "probability": 0.014222,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 82.32,
+        "probability": 0.011069,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 82.44,
+        "probability": 0.024677,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 82.56,
+        "probability": 0.01232,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 82.68,
+        "probability": 0.009224,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 82.8,
+        "probability": 0.005837,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 82.91999999999999,
+        "probability": 0.006911,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 83.03999999999999,
+        "probability": 0.007819,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 83.16,
+        "probability": 0.020701,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 83.28,
+        "probability": 0.029253,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 83.4,
+        "probability": 0.028855,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 83.52,
+        "probability": 0.046041,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 83.64,
+        "probability": 0.017372,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 83.75999999999999,
+        "probability": 0.011376,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 83.88,
+        "probability": 0.045358,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.08,
+        "longitude": 84.0,
+        "probability": 0.021107,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 82.08,
+        "probability": 0.025918,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 82.19999999999999,
+        "probability": 0.021724,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 82.32,
+        "probability": 0.035636,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 82.44,
+        "probability": 0.041943,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 82.56,
+        "probability": 0.027082,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 82.68,
+        "probability": 0.014697,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 82.8,
+        "probability": 0.041242,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 82.91999999999999,
+        "probability": 0.013101,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 83.03999999999999,
+        "probability": 0.043099,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 83.16,
+        "probability": 0.031205,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 83.28,
+        "probability": 0.035895,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 83.4,
+        "probability": 0.037296,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 83.52,
+        "probability": 0.029291,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 83.64,
+        "probability": 0.01486,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 83.75999999999999,
+        "probability": 0.0045,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 83.88,
+        "probability": 0.080639,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.2,
+        "longitude": 84.0,
+        "probability": 0.109246,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 82.08,
+        "probability": 0.016539,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 82.19999999999999,
+        "probability": 0.015535,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 82.32,
+        "probability": 0.019795,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 82.44,
+        "probability": 0.069209,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 82.56,
+        "probability": 0.033928,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 82.68,
+        "probability": 0.009941,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 82.8,
+        "probability": 0.018225,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 82.91999999999999,
+        "probability": 0.014836,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 83.03999999999999,
+        "probability": 0.02419,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 83.16,
+        "probability": 0.024802,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 83.28,
+        "probability": 0.014177,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 83.4,
+        "probability": 0.010698,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 83.52,
+        "probability": 0.012506,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 83.64,
+        "probability": 0.027041,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 83.75999999999999,
+        "probability": 0.039025,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 83.88,
+        "probability": 0.056067,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.32,
+        "longitude": 84.0,
+        "probability": 0.034565,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 82.08,
+        "probability": 0.031673,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 82.19999999999999,
+        "probability": 0.113546,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 82.32,
+        "probability": 0.108517,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 82.44,
+        "probability": 0.057535,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 82.56,
+        "probability": 0.017511,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 82.68,
+        "probability": 0.012322,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 82.8,
+        "probability": 0.014492,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 82.91999999999999,
+        "probability": 0.031191,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 83.03999999999999,
+        "probability": 0.057276,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 83.16,
+        "probability": 0.027013,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 83.28,
+        "probability": 0.017393,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 83.4,
+        "probability": 0.011925,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 83.52,
+        "probability": 0.036949,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 83.64,
+        "probability": 0.017251,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 83.75999999999999,
+        "probability": 0.02378,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 83.88,
+        "probability": 0.022193,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.44,
+        "longitude": 84.0,
+        "probability": 0.020479,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 82.08,
+        "probability": 0.017376,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 82.19999999999999,
+        "probability": 0.09122,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 82.32,
+        "probability": 0.087529,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 82.44,
+        "probability": 0.068067,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 82.56,
+        "probability": 0.045652,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 82.68,
+        "probability": 0.044819,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 82.8,
+        "probability": 0.054933,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 82.91999999999999,
+        "probability": 0.048194,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 83.03999999999999,
+        "probability": 0.040347,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 83.16,
+        "probability": 0.046576,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 83.28,
+        "probability": 0.031529,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 83.4,
+        "probability": 0.01905,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 83.52,
+        "probability": 0.021964,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 83.64,
+        "probability": 0.018354,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 83.75999999999999,
+        "probability": 0.009953,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 83.88,
+        "probability": 0.015978,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.559999999999995,
+        "longitude": 84.0,
+        "probability": 0.024191,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 82.08,
+        "probability": 0.08654,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 82.19999999999999,
+        "probability": 0.092932,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 82.32,
+        "probability": 0.113747,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 82.44,
+        "probability": 0.092846,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 82.56,
+        "probability": 0.113182,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 82.68,
+        "probability": 0.084011,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 82.8,
+        "probability": 0.060772,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 82.91999999999999,
+        "probability": 0.050203,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 83.03999999999999,
+        "probability": 0.083484,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 83.16,
+        "probability": 0.066938,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 83.28,
+        "probability": 0.058752,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 83.4,
+        "probability": 0.03573,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 83.52,
+        "probability": 0.017379,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 83.64,
+        "probability": 0.019929,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 83.75999999999999,
+        "probability": 0.00921,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 83.88,
+        "probability": 0.015405,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.68,
+        "longitude": 84.0,
+        "probability": 0.026817,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 82.08,
+        "probability": 0.298491,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 82.19999999999999,
+        "probability": 0.219391,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 82.32,
+        "probability": 0.123974,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 82.44,
+        "probability": 0.116219,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 82.56,
+        "probability": 0.112981,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 82.68,
+        "probability": 0.132046,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 82.8,
+        "probability": 0.098691,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 82.91999999999999,
+        "probability": 0.081794,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 83.03999999999999,
+        "probability": 0.10202,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 83.16,
+        "probability": 0.186291,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 83.28,
+        "probability": 0.065599,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 83.4,
+        "probability": 0.049255,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 83.52,
+        "probability": 0.022793,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 83.64,
+        "probability": 0.025001,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 83.75999999999999,
+        "probability": 0.01502,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 83.88,
+        "probability": 0.01372,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.8,
+        "longitude": 84.0,
+        "probability": 0.003906,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 82.08,
+        "probability": 0.499197,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 82.19999999999999,
+        "probability": 0.342272,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 82.32,
+        "probability": 0.198238,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 82.44,
+        "probability": 0.15299,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 82.56,
+        "probability": 0.128562,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 82.68,
+        "probability": 0.143354,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 82.8,
+        "probability": 0.110166,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 82.91999999999999,
+        "probability": 0.08346,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 83.03999999999999,
+        "probability": 0.122845,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 83.16,
+        "probability": 0.519081,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 83.28,
+        "probability": 0.36546,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 83.4,
+        "probability": 0.251181,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 83.52,
+        "probability": 0.102803,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 83.64,
+        "probability": 0.039595,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 83.75999999999999,
+        "probability": 0.020639,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 83.88,
+        "probability": 0.01167,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 25.92,
+        "longitude": 84.0,
+        "probability": 0.003891,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 82.08,
+        "probability": 0.576413,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 82.19999999999999,
+        "probability": 0.434957,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 82.32,
+        "probability": 0.214353,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 82.44,
+        "probability": 0.188564,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 82.56,
+        "probability": 0.163754,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 82.68,
+        "probability": 0.198424,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 82.8,
+        "probability": 0.101595,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 82.91999999999999,
+        "probability": 0.175979,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 83.03999999999999,
+        "probability": 0.371729,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 83.16,
+        "probability": 0.577777,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 83.28,
+        "probability": 0.599101,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 83.4,
+        "probability": 0.39206,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 83.52,
+        "probability": 0.121136,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 83.64,
+        "probability": 0.053968,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 83.75999999999999,
+        "probability": 0.028464,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 83.88,
+        "probability": 0.009611,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.04,
+        "longitude": 84.0,
+        "probability": 0.003429,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 82.08,
+        "probability": 0.704978,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 82.19999999999999,
+        "probability": 0.626145,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 82.32,
+        "probability": 0.508352,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 82.44,
+        "probability": 0.362889,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 82.56,
+        "probability": 0.307056,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 82.68,
+        "probability": 0.575102,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 82.8,
+        "probability": 0.616684,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 82.91999999999999,
+        "probability": 0.701604,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 83.03999999999999,
+        "probability": 0.410354,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 83.16,
+        "probability": 0.423333,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 83.28,
+        "probability": 0.444056,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 83.4,
+        "probability": 0.181865,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 83.52,
+        "probability": 0.139368,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 83.64,
+        "probability": 0.055465,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 83.75999999999999,
+        "probability": 0.036021,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 83.88,
+        "probability": 0.028103,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.16,
+        "longitude": 84.0,
+        "probability": 0.020921,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 82.08,
+        "probability": 0.77514,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 82.19999999999999,
+        "probability": 0.814048,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 82.32,
+        "probability": 0.632977,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 82.44,
+        "probability": 0.51306,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 82.56,
+        "probability": 0.457959,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 82.68,
+        "probability": 0.751551,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 82.8,
+        "probability": 0.629747,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 82.91999999999999,
+        "probability": 0.552711,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 83.03999999999999,
+        "probability": 0.45054,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 83.16,
+        "probability": 0.324016,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 83.28,
+        "probability": 0.296696,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 83.4,
+        "probability": 0.079629,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 83.52,
+        "probability": 0.069061,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 83.64,
+        "probability": 0.012253,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 83.75999999999999,
+        "probability": 0.106297,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 83.88,
+        "probability": 0.023632,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 84.0,
+        "probability": 0.010202,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 82.08,
+        "probability": 0.840025,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 82.19999999999999,
+        "probability": 0.634184,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 82.32,
+        "probability": 0.518859,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 82.44,
+        "probability": 0.526912,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 82.56,
+        "probability": 0.526271,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 82.68,
+        "probability": 0.60738,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 82.8,
+        "probability": 0.562099,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 82.91999999999999,
+        "probability": 0.337339,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 83.03999999999999,
+        "probability": 0.402231,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 83.16,
+        "probability": 0.531237,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 83.28,
+        "probability": 0.14855,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 83.4,
+        "probability": 0.086416,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 83.52,
+        "probability": 0.050591,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 83.64,
+        "probability": 0.045562,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 83.75999999999999,
+        "probability": 0.124016,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 83.88,
+        "probability": 0.158367,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 84.0,
+        "probability": 0.045987,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 82.08,
+        "probability": 0.796184,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 82.19999999999999,
+        "probability": 0.492274,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 82.32,
+        "probability": 0.712978,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 82.44,
+        "probability": 0.617357,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 82.56,
+        "probability": 0.670381,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 82.68,
+        "probability": 0.638946,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 82.8,
+        "probability": 0.447575,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 82.91999999999999,
+        "probability": 0.461851,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 83.03999999999999,
+        "probability": 0.341577,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 83.16,
+        "probability": 0.49437,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 83.28,
+        "probability": 0.271468,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 83.4,
+        "probability": 0.213173,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 83.52,
+        "probability": 0.06245,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 83.64,
+        "probability": 0.125207,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 83.75999999999999,
+        "probability": 0.238488,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 83.88,
+        "probability": 0.195118,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.52,
+        "longitude": 84.0,
+        "probability": 0.175818,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 82.08,
+        "probability": 0.759367,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 82.19999999999999,
+        "probability": 0.584825,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 82.32,
+        "probability": 0.427309,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 82.44,
+        "probability": 0.771948,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 82.56,
+        "probability": 0.800768,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 82.68,
+        "probability": 0.655494,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 82.8,
+        "probability": 0.403587,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 82.91999999999999,
+        "probability": 0.3502,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 83.03999999999999,
+        "probability": 0.519256,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 83.16,
+        "probability": 0.408551,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 83.28,
+        "probability": 0.589107,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 83.4,
+        "probability": 0.265871,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 83.52,
+        "probability": 0.226066,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 83.64,
+        "probability": 0.146929,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 83.75999999999999,
+        "probability": 0.272784,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 83.88,
+        "probability": 0.192042,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.64,
+        "longitude": 84.0,
+        "probability": 0.24432,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.08,
+        "probability": 0.843531,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.19999999999999,
+        "probability": 0.795904,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.32,
+        "probability": 0.735463,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.44,
+        "probability": 0.817894,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.56,
+        "probability": 0.802604,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.68,
+        "probability": 0.67583,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.8,
+        "probability": 0.433236,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.91999999999999,
+        "probability": 0.311649,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 83.03999999999999,
+        "probability": 0.372198,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 83.16,
+        "probability": 0.371787,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 83.28,
+        "probability": 0.302796,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 83.4,
+        "probability": 0.363596,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 83.52,
+        "probability": 0.311109,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 83.64,
+        "probability": 0.266597,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 83.75999999999999,
+        "probability": 0.216457,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 83.88,
+        "probability": 0.204035,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 84.0,
+        "probability": 0.164518,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.08,
+        "probability": 0.824566,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.19999999999999,
+        "probability": 0.679937,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.32,
+        "probability": 0.745111,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.44,
+        "probability": 0.83438,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.56,
+        "probability": 0.704955,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.68,
+        "probability": 0.466254,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.8,
+        "probability": 0.339118,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.91999999999999,
+        "probability": 0.316344,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 83.03999999999999,
+        "probability": 0.278929,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 83.16,
+        "probability": 0.369465,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 83.28,
+        "probability": 0.358308,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 83.4,
+        "probability": 0.42208,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 83.52,
+        "probability": 0.298954,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 83.64,
+        "probability": 0.238514,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 83.75999999999999,
+        "probability": 0.192512,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 83.88,
+        "probability": 0.308521,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 84.0,
+        "probability": 0.216927,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.08,
+        "probability": 0.855833,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.19999999999999,
+        "probability": 0.88443,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.32,
+        "probability": 0.896399,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.44,
+        "probability": 0.864283,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.56,
+        "probability": 0.786922,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.68,
+        "probability": 0.602536,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.8,
+        "probability": 0.612277,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.91999999999999,
+        "probability": 0.244832,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 83.03999999999999,
+        "probability": 0.224362,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 83.16,
+        "probability": 0.240405,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 83.28,
+        "probability": 0.316724,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 83.4,
+        "probability": 0.316411,
+        "predicted_high_rain": true
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 83.52,
+        "probability": 0.149338,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 83.64,
+        "probability": 0.201877,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 83.75999999999999,
+        "probability": 0.096629,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 83.88,
+        "probability": 0.086469,
+        "predicted_high_rain": false
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 84.0,
+        "probability": 0.237636,
+        "predicted_high_rain": false
+      }
+    ]
+  },
+  "model": {
+    "name": "XGBoost",
+    "version": "july2020-v1",
+    "operating_threshold": 0.25
+  },
+  "summary": {
+    "total_cells": 289,
+    "predicted_high_rain_cells": 105,
+    "minimum_probability": 0.003429,
+    "maximum_probability": 0.896399,
+    "mean_probability": 0.239751
+  },
+  "explainability": {
+    "method": "SHAP PermutationExplainer",
+    "global_top_features": [
+      {
+        "feature": "cloud_water",
+        "mean_abs_shap": 0.251131
+      },
+      {
+        "feature": "relative_humidity",
+        "mean_abs_shap": 0.122335
+      },
+      {
+        "feature": "relative_humidity_lag3",
+        "mean_abs_shap": 0.071501
+      },
+      {
+        "feature": "u_wind",
+        "mean_abs_shap": 0.052782
+      },
+      {
+        "feature": "relative_humidity_lag1",
+        "mean_abs_shap": 0.044185
+      },
+      {
+        "feature": "surface_pressure_lag3",
+        "mean_abs_shap": 0.043746
+      },
+      {
+        "feature": "v_wind",
+        "mean_abs_shap": 0.02962
+      },
+      {
+        "feature": "u_wind_lag1",
+        "mean_abs_shap": 0.028179
+      },
+      {
+        "feature": "wind_speed_lag3",
+        "mean_abs_shap": 0.022723
+      },
+      {
+        "feature": "temperature",
+        "mean_abs_shap": 0.021904
+      }
+    ],
+    "cell_explanations": [
+      {
+        "latitude": 27.0,
+        "longitude": 82.32,
+        "model_probability": 0.896399,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 2.28125,
+            "shap_value": 0.24683
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 96.89016,
+            "shap_value": 0.111693
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 96.78796,
+            "shap_value": 0.106723
+          },
+          {
+            "feature": "u_wind",
+            "value": -3.7188396,
+            "shap_value": 0.07616
+          },
+          {
+            "feature": "surface_pressure_lag3",
+            "value": 99222.59,
+            "shap_value": 0.055771
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "temperature",
+            "value": 300.16937,
+            "shap_value": -0.028497
+          },
+          {
+            "feature": "temperature_change",
+            "value": 0.48980713,
+            "shap_value": -0.018147
+          },
+          {
+            "feature": "temperature_lag3",
+            "value": 299.85666,
+            "shap_value": -0.016103
+          },
+          {
+            "feature": "u_wind_lag3",
+            "value": -3.6953125,
+            "shap_value": -0.012403
+          },
+          {
+            "feature": "precipitation_lag1",
+            "value": 2.328125,
+            "shap_value": -0.004753
+          }
+        ]
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.19999999999999,
+        "model_probability": 0.88443,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 2.59375,
+            "shap_value": 0.260183
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 96.97546,
+            "shap_value": 0.07376
+          },
+          {
+            "feature": "u_wind",
+            "value": -3.7969646,
+            "shap_value": 0.06945
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 97.29641,
+            "shap_value": 0.061535
+          },
+          {
+            "feature": "surface_pressure_lag3",
+            "value": 99174.59,
+            "shap_value": 0.052466
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "cloud_water_lag3",
+            "value": 1.875,
+            "shap_value": -0.020335
+          },
+          {
+            "feature": "surface_pressure_lag1",
+            "value": 99207.28,
+            "shap_value": -0.017203
+          },
+          {
+            "feature": "precipitation_lag1",
+            "value": 2.78125,
+            "shap_value": -0.016829
+          },
+          {
+            "feature": "precipitation_lag3",
+            "value": 1.9375,
+            "shap_value": -0.005605
+          },
+          {
+            "feature": "surface_pressure",
+            "value": 99216.16,
+            "shap_value": -0.004517
+          }
+        ]
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.44,
+        "model_probability": 0.864283,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 2.203125,
+            "shap_value": 0.258815
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 96.85046,
+            "shap_value": 0.127499
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 96.89016,
+            "shap_value": 0.085683
+          },
+          {
+            "feature": "u_wind",
+            "value": -3.6094646,
+            "shap_value": 0.055138
+          },
+          {
+            "feature": "v_wind_lag3",
+            "value": 1.4433098,
+            "shap_value": 0.04001
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "temperature_lag1",
+            "value": 299.66394,
+            "shap_value": -0.032114
+          },
+          {
+            "feature": "surface_pressure",
+            "value": 99312.16,
+            "shap_value": -0.019873
+          },
+          {
+            "feature": "temperature",
+            "value": 299.79437,
+            "shap_value": -0.019152
+          },
+          {
+            "feature": "u_wind_lag3",
+            "value": -3.3359375,
+            "shap_value": -0.018695
+          },
+          {
+            "feature": "wind_speed",
+            "value": 3.7120957,
+            "shap_value": -0.008797
+          }
+        ]
+      },
+      {
+        "latitude": 27.0,
+        "longitude": 82.08,
+        "model_probability": 0.855833,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 3.046875,
+            "shap_value": 0.279673
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 97.00671,
+            "shap_value": 0.221463
+          },
+          {
+            "feature": "surface_pressure_lag3",
+            "value": 99110.59,
+            "shap_value": 0.073295
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 97.45266,
+            "shap_value": 0.049779
+          },
+          {
+            "feature": "u_wind",
+            "value": -3.9532146,
+            "shap_value": 0.041433
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "v_wind_lag3",
+            "value": 2.0995598,
+            "shap_value": -0.027529
+          },
+          {
+            "feature": "cloud_water_lag3",
+            "value": 3.59375,
+            "shap_value": -0.02588
+          },
+          {
+            "feature": "temperature_lag3",
+            "value": 300.04416,
+            "shap_value": -0.016702
+          },
+          {
+            "feature": "precipitation",
+            "value": 3.046875,
+            "shap_value": -0.012726
+          },
+          {
+            "feature": "cloud_water_lag1",
+            "value": 3.53125,
+            "shap_value": -0.012192
+          }
+        ]
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.08,
+        "model_probability": 0.843531,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 2.578125,
+            "shap_value": 0.327462
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 97.13171,
+            "shap_value": 0.126068
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 97.10891,
+            "shap_value": 0.062343
+          },
+          {
+            "feature": "u_wind",
+            "value": -3.1250896,
+            "shap_value": 0.057028
+          },
+          {
+            "feature": "relative_humidity_lag1",
+            "value": 96.99391,
+            "shap_value": 0.052966
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "precipitation_lag1",
+            "value": 3.375,
+            "shap_value": -0.044902
+          },
+          {
+            "feature": "cloud_water_change",
+            "value": -0.6875,
+            "shap_value": -0.029182
+          },
+          {
+            "feature": "temperature",
+            "value": 300.02875,
+            "shap_value": -0.017562
+          },
+          {
+            "feature": "cloud_water_lag3",
+            "value": 4.71875,
+            "shap_value": -0.015219
+          },
+          {
+            "feature": "temperature_lag1",
+            "value": 300.03894,
+            "shap_value": -0.011771
+          }
+        ]
+      },
+      {
+        "latitude": 26.4,
+        "longitude": 82.08,
+        "model_probability": 0.840025,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 2.34375,
+            "shap_value": 0.221708
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 96.97546,
+            "shap_value": 0.136837
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 96.95266,
+            "shap_value": 0.078893
+          },
+          {
+            "feature": "temperature",
+            "value": 300.13812,
+            "shap_value": 0.047584
+          },
+          {
+            "feature": "surface_pressure_lag3",
+            "value": 99174.59,
+            "shap_value": 0.043403
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "cloud_water_lag3",
+            "value": 3.03125,
+            "shap_value": -0.011452
+          },
+          {
+            "feature": "precipitation",
+            "value": 2.359375,
+            "shap_value": -0.010773
+          },
+          {
+            "feature": "wind_speed_lag3",
+            "value": 2.5397794,
+            "shap_value": -0.006102
+          },
+          {
+            "feature": "wind_speed_lag1",
+            "value": 3.02942,
+            "shap_value": -0.002876
+          },
+          {
+            "feature": "temperature_lag3",
+            "value": 300.4504,
+            "shap_value": -0.002005
+          }
+        ]
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.44,
+        "model_probability": 0.83438,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 2.046875,
+            "shap_value": 0.233174
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 96.47546,
+            "shap_value": 0.091596
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 96.98391,
+            "shap_value": 0.074252
+          },
+          {
+            "feature": "relative_humidity_lag1",
+            "value": 96.90016,
+            "shap_value": 0.064603
+          },
+          {
+            "feature": "u_wind",
+            "value": -3.4532146,
+            "shap_value": 0.048217
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "surface_pressure",
+            "value": 99328.16,
+            "shap_value": -0.04477
+          },
+          {
+            "feature": "temperature_lag1",
+            "value": 299.83582,
+            "shap_value": -0.031724
+          },
+          {
+            "feature": "temperature_lag3",
+            "value": 299.93478,
+            "shap_value": -0.018534
+          },
+          {
+            "feature": "precipitation_lag1",
+            "value": 2.28125,
+            "shap_value": -0.009507
+          },
+          {
+            "feature": "temperature_change",
+            "value": 0.14605713,
+            "shap_value": -0.002061
+          }
+        ]
+      },
+      {
+        "latitude": 26.879999999999995,
+        "longitude": 82.08,
+        "model_probability": 0.824566,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 2.859375,
+            "shap_value": 0.228712
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 97.10046,
+            "shap_value": 0.100413
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 97.26516,
+            "shap_value": 0.082213
+          },
+          {
+            "feature": "u_wind",
+            "value": -3.5625896,
+            "shap_value": 0.075535
+          },
+          {
+            "feature": "v_wind_lag3",
+            "value": 2.0683098,
+            "shap_value": 0.047044
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "precipitation",
+            "value": 2.859375,
+            "shap_value": -0.035563
+          },
+          {
+            "feature": "precipitation_lag1",
+            "value": 3.484375,
+            "shap_value": -0.029701
+          },
+          {
+            "feature": "u_wind_lag3",
+            "value": -3.4453125,
+            "shap_value": -0.023522
+          },
+          {
+            "feature": "surface_pressure_lag1",
+            "value": 99175.28,
+            "shap_value": -0.008823
+          },
+          {
+            "feature": "cloud_water_lag3",
+            "value": 4.3125,
+            "shap_value": -0.008374
+          }
+        ]
+      },
+      {
+        "latitude": 26.76,
+        "longitude": 82.44,
+        "model_probability": 0.817894,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 2.4375,
+            "shap_value": 0.235146
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 96.56921,
+            "shap_value": 0.097575
+          },
+          {
+            "feature": "u_wind",
+            "value": -3.0938396,
+            "shap_value": 0.063867
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 97.01516,
+            "shap_value": 0.052321
+          },
+          {
+            "feature": "temperature",
+            "value": 300.20062,
+            "shap_value": 0.035549
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "precipitation_lag1",
+            "value": 2.3125,
+            "shap_value": -0.024865
+          },
+          {
+            "feature": "surface_pressure",
+            "value": 99344.16,
+            "shap_value": -0.019023
+          },
+          {
+            "feature": "temperature_change",
+            "value": 0.34918213,
+            "shap_value": -0.007575
+          },
+          {
+            "feature": "precipitation",
+            "value": 2.4375,
+            "shap_value": -0.003337
+          },
+          {
+            "feature": "precipitation_change",
+            "value": 0.125,
+            "shap_value": -0.001384
+          }
+        ]
+      },
+      {
+        "latitude": 26.28,
+        "longitude": 82.19999999999999,
+        "model_probability": 0.814048,
+        "top_positive_features": [
+          {
+            "feature": "cloud_water",
+            "value": 2.625,
+            "shap_value": 0.219602
+          },
+          {
+            "feature": "relative_humidity",
+            "value": 96.60046,
+            "shap_value": 0.141416
+          },
+          {
+            "feature": "relative_humidity_lag1",
+            "value": 97.33766,
+            "shap_value": 0.0839
+          },
+          {
+            "feature": "surface_pressure_lag3",
+            "value": 99206.59,
+            "shap_value": 0.058176
+          },
+          {
+            "feature": "relative_humidity_lag3",
+            "value": 97.07766,
+            "shap_value": 0.056296
+          }
+        ],
+        "top_negative_features": [
+          {
+            "feature": "cloud_water_lag3",
+            "value": 3.375,
+            "shap_value": -0.030227
+          },
+          {
+            "feature": "cloud_water_lag1",
+            "value": 2.265625,
+            "shap_value": -0.009292
+          },
+          {
+            "feature": "v_wind_lag1",
+            "value": 1.8270874,
+            "shap_value": -0.007994
+          },
+          {
+            "feature": "wind_speed_lag1",
+            "value": 2.9353359,
+            "shap_value": -0.005896
+          },
+          {
+            "feature": "temperature_lag1",
+            "value": 300.0077,
+            "shap_value": -0.005847
+          }
+        ]
+      }
+    ]
+  },
+  "historical_verification": {
+    "available": true,
+    "note": "Historical verification only. Not used as a future forecast input."
+  },
+  "source": {
+    "dataset": "NCMRWF IMDAA",
+    "resolution": "approximately 12 km",
+    "frequency": "hourly"
+  }
+}

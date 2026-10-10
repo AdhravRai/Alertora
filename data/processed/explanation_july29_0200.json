@@ -1,0 +1,644 @@
+{
+  "base_time": "2020-07-29 02:00:00",
+  "forecast_time": "2020-07-29T03:00:00",
+  "model": {
+    "name": "XGBoost",
+    "version": "july2020-v1"
+  },
+  "explanation_method": "SHAP PermutationExplainer",
+  "explained_cells": 10,
+  "global_top_features": [
+    {
+      "feature": "cloud_water",
+      "mean_abs_shap": 0.251131
+    },
+    {
+      "feature": "relative_humidity",
+      "mean_abs_shap": 0.122335
+    },
+    {
+      "feature": "relative_humidity_lag3",
+      "mean_abs_shap": 0.071501
+    },
+    {
+      "feature": "u_wind",
+      "mean_abs_shap": 0.052782
+    },
+    {
+      "feature": "relative_humidity_lag1",
+      "mean_abs_shap": 0.044185
+    },
+    {
+      "feature": "surface_pressure_lag3",
+      "mean_abs_shap": 0.043746
+    },
+    {
+      "feature": "v_wind",
+      "mean_abs_shap": 0.02962
+    },
+    {
+      "feature": "u_wind_lag1",
+      "mean_abs_shap": 0.028179
+    },
+    {
+      "feature": "wind_speed_lag3",
+      "mean_abs_shap": 0.022723
+    },
+    {
+      "feature": "temperature",
+      "mean_abs_shap": 0.021904
+    }
+  ],
+  "cell_explanations": [
+    {
+      "latitude": 27.0,
+      "longitude": 82.32,
+      "model_probability": 0.896399,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 2.28125,
+          "shap_value": 0.24683
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 96.89016,
+          "shap_value": 0.111693
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 96.78796,
+          "shap_value": 0.106723
+        },
+        {
+          "feature": "u_wind",
+          "value": -3.7188396,
+          "shap_value": 0.07616
+        },
+        {
+          "feature": "surface_pressure_lag3",
+          "value": 99222.59,
+          "shap_value": 0.055771
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "temperature",
+          "value": 300.16937,
+          "shap_value": -0.028497
+        },
+        {
+          "feature": "temperature_change",
+          "value": 0.48980713,
+          "shap_value": -0.018147
+        },
+        {
+          "feature": "temperature_lag3",
+          "value": 299.85666,
+          "shap_value": -0.016103
+        },
+        {
+          "feature": "u_wind_lag3",
+          "value": -3.6953125,
+          "shap_value": -0.012403
+        },
+        {
+          "feature": "precipitation_lag1",
+          "value": 2.328125,
+          "shap_value": -0.004753
+        }
+      ]
+    },
+    {
+      "latitude": 27.0,
+      "longitude": 82.19999999999999,
+      "model_probability": 0.88443,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 2.59375,
+          "shap_value": 0.260183
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 96.97546,
+          "shap_value": 0.07376
+        },
+        {
+          "feature": "u_wind",
+          "value": -3.7969646,
+          "shap_value": 0.06945
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 97.29641,
+          "shap_value": 0.061535
+        },
+        {
+          "feature": "surface_pressure_lag3",
+          "value": 99174.59,
+          "shap_value": 0.052466
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "cloud_water_lag3",
+          "value": 1.875,
+          "shap_value": -0.020335
+        },
+        {
+          "feature": "surface_pressure_lag1",
+          "value": 99207.28,
+          "shap_value": -0.017203
+        },
+        {
+          "feature": "precipitation_lag1",
+          "value": 2.78125,
+          "shap_value": -0.016829
+        },
+        {
+          "feature": "precipitation_lag3",
+          "value": 1.9375,
+          "shap_value": -0.005605
+        },
+        {
+          "feature": "surface_pressure",
+          "value": 99216.16,
+          "shap_value": -0.004517
+        }
+      ]
+    },
+    {
+      "latitude": 27.0,
+      "longitude": 82.44,
+      "model_probability": 0.864283,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 2.203125,
+          "shap_value": 0.258815
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 96.85046,
+          "shap_value": 0.127499
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 96.89016,
+          "shap_value": 0.085683
+        },
+        {
+          "feature": "u_wind",
+          "value": -3.6094646,
+          "shap_value": 0.055138
+        },
+        {
+          "feature": "v_wind_lag3",
+          "value": 1.4433098,
+          "shap_value": 0.04001
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "temperature_lag1",
+          "value": 299.66394,
+          "shap_value": -0.032114
+        },
+        {
+          "feature": "surface_pressure",
+          "value": 99312.16,
+          "shap_value": -0.019873
+        },
+        {
+          "feature": "temperature",
+          "value": 299.79437,
+          "shap_value": -0.019152
+        },
+        {
+          "feature": "u_wind_lag3",
+          "value": -3.3359375,
+          "shap_value": -0.018695
+        },
+        {
+          "feature": "wind_speed",
+          "value": 3.7120957,
+          "shap_value": -0.008797
+        }
+      ]
+    },
+    {
+      "latitude": 27.0,
+      "longitude": 82.08,
+      "model_probability": 0.855833,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 3.046875,
+          "shap_value": 0.279673
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 97.00671,
+          "shap_value": 0.221463
+        },
+        {
+          "feature": "surface_pressure_lag3",
+          "value": 99110.59,
+          "shap_value": 0.073295
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 97.45266,
+          "shap_value": 0.049779
+        },
+        {
+          "feature": "u_wind",
+          "value": -3.9532146,
+          "shap_value": 0.041433
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "v_wind_lag3",
+          "value": 2.0995598,
+          "shap_value": -0.027529
+        },
+        {
+          "feature": "cloud_water_lag3",
+          "value": 3.59375,
+          "shap_value": -0.02588
+        },
+        {
+          "feature": "temperature_lag3",
+          "value": 300.04416,
+          "shap_value": -0.016702
+        },
+        {
+          "feature": "precipitation",
+          "value": 3.046875,
+          "shap_value": -0.012726
+        },
+        {
+          "feature": "cloud_water_lag1",
+          "value": 3.53125,
+          "shap_value": -0.012192
+        }
+      ]
+    },
+    {
+      "latitude": 26.76,
+      "longitude": 82.08,
+      "model_probability": 0.843531,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 2.578125,
+          "shap_value": 0.327462
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 97.13171,
+          "shap_value": 0.126068
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 97.10891,
+          "shap_value": 0.062343
+        },
+        {
+          "feature": "u_wind",
+          "value": -3.1250896,
+          "shap_value": 0.057028
+        },
+        {
+          "feature": "relative_humidity_lag1",
+          "value": 96.99391,
+          "shap_value": 0.052966
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "precipitation_lag1",
+          "value": 3.375,
+          "shap_value": -0.044902
+        },
+        {
+          "feature": "cloud_water_change",
+          "value": -0.6875,
+          "shap_value": -0.029182
+        },
+        {
+          "feature": "temperature",
+          "value": 300.02875,
+          "shap_value": -0.017562
+        },
+        {
+          "feature": "cloud_water_lag3",
+          "value": 4.71875,
+          "shap_value": -0.015219
+        },
+        {
+          "feature": "temperature_lag1",
+          "value": 300.03894,
+          "shap_value": -0.011771
+        }
+      ]
+    },
+    {
+      "latitude": 26.4,
+      "longitude": 82.08,
+      "model_probability": 0.840025,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 2.34375,
+          "shap_value": 0.221708
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 96.97546,
+          "shap_value": 0.136837
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 96.95266,
+          "shap_value": 0.078893
+        },
+        {
+          "feature": "temperature",
+          "value": 300.13812,
+          "shap_value": 0.047584
+        },
+        {
+          "feature": "surface_pressure_lag3",
+          "value": 99174.59,
+          "shap_value": 0.043403
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "cloud_water_lag3",
+          "value": 3.03125,
+          "shap_value": -0.011452
+        },
+        {
+          "feature": "precipitation",
+          "value": 2.359375,
+          "shap_value": -0.010773
+        },
+        {
+          "feature": "wind_speed_lag3",
+          "value": 2.5397794,
+          "shap_value": -0.006102
+        },
+        {
+          "feature": "wind_speed_lag1",
+          "value": 3.02942,
+          "shap_value": -0.002876
+        },
+        {
+          "feature": "temperature_lag3",
+          "value": 300.4504,
+          "shap_value": -0.002005
+        }
+      ]
+    },
+    {
+      "latitude": 26.879999999999995,
+      "longitude": 82.44,
+      "model_probability": 0.83438,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 2.046875,
+          "shap_value": 0.233174
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 96.47546,
+          "shap_value": 0.091596
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 96.98391,
+          "shap_value": 0.074252
+        },
+        {
+          "feature": "relative_humidity_lag1",
+          "value": 96.90016,
+          "shap_value": 0.064603
+        },
+        {
+          "feature": "u_wind",
+          "value": -3.4532146,
+          "shap_value": 0.048217
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "surface_pressure",
+          "value": 99328.16,
+          "shap_value": -0.04477
+        },
+        {
+          "feature": "temperature_lag1",
+          "value": 299.83582,
+          "shap_value": -0.031724
+        },
+        {
+          "feature": "temperature_lag3",
+          "value": 299.93478,
+          "shap_value": -0.018534
+        },
+        {
+          "feature": "precipitation_lag1",
+          "value": 2.28125,
+          "shap_value": -0.009507
+        },
+        {
+          "feature": "temperature_change",
+          "value": 0.14605713,
+          "shap_value": -0.002061
+        }
+      ]
+    },
+    {
+      "latitude": 26.879999999999995,
+      "longitude": 82.08,
+      "model_probability": 0.824566,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 2.859375,
+          "shap_value": 0.228712
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 97.10046,
+          "shap_value": 0.100413
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 97.26516,
+          "shap_value": 0.082213
+        },
+        {
+          "feature": "u_wind",
+          "value": -3.5625896,
+          "shap_value": 0.075535
+        },
+        {
+          "feature": "v_wind_lag3",
+          "value": 2.0683098,
+          "shap_value": 0.047044
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "precipitation",
+          "value": 2.859375,
+          "shap_value": -0.035563
+        },
+        {
+          "feature": "precipitation_lag1",
+          "value": 3.484375,
+          "shap_value": -0.029701
+        },
+        {
+          "feature": "u_wind_lag3",
+          "value": -3.4453125,
+          "shap_value": -0.023522
+        },
+        {
+          "feature": "surface_pressure_lag1",
+          "value": 99175.28,
+          "shap_value": -0.008823
+        },
+        {
+          "feature": "cloud_water_lag3",
+          "value": 4.3125,
+          "shap_value": -0.008374
+        }
+      ]
+    },
+    {
+      "latitude": 26.76,
+      "longitude": 82.44,
+      "model_probability": 0.817894,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 2.4375,
+          "shap_value": 0.235146
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 96.56921,
+          "shap_value": 0.097575
+        },
+        {
+          "feature": "u_wind",
+          "value": -3.0938396,
+          "shap_value": 0.063867
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 97.01516,
+          "shap_value": 0.052321
+        },
+        {
+          "feature": "temperature",
+          "value": 300.20062,
+          "shap_value": 0.035549
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "precipitation_lag1",
+          "value": 2.3125,
+          "shap_value": -0.024865
+        },
+        {
+          "feature": "surface_pressure",
+          "value": 99344.16,
+          "shap_value": -0.019023
+        },
+        {
+          "feature": "temperature_change",
+          "value": 0.34918213,
+          "shap_value": -0.007575
+        },
+        {
+          "feature": "precipitation",
+          "value": 2.4375,
+          "shap_value": -0.003337
+        },
+        {
+          "feature": "precipitation_change",
+          "value": 0.125,
+          "shap_value": -0.001384
+        }
+      ]
+    },
+    {
+      "latitude": 26.28,
+      "longitude": 82.19999999999999,
+      "model_probability": 0.814048,
+      "top_positive_features": [
+        {
+          "feature": "cloud_water",
+          "value": 2.625,
+          "shap_value": 0.219602
+        },
+        {
+          "feature": "relative_humidity",
+          "value": 96.60046,
+          "shap_value": 0.141416
+        },
+        {
+          "feature": "relative_humidity_lag1",
+          "value": 97.33766,
+          "shap_value": 0.0839
+        },
+        {
+          "feature": "surface_pressure_lag3",
+          "value": 99206.59,
+          "shap_value": 0.058176
+        },
+        {
+          "feature": "relative_humidity_lag3",
+          "value": 97.07766,
+          "shap_value": 0.056296
+        }
+      ],
+      "top_negative_features": [
+        {
+          "feature": "cloud_water_lag3",
+          "value": 3.375,
+          "shap_value": -0.030227
+        },
+        {
+          "feature": "cloud_water_lag1",
+          "value": 2.265625,
+          "shap_value": -0.009292
+        },
+        {
+          "feature": "v_wind_lag1",
+          "value": 1.8270874,
+          "shap_value": -0.007994
+        },
+        {
+          "feature": "wind_speed_lag1",
+          "value": 2.9353359,
+          "shap_value": -0.005896
+        },
+        {
+          "feature": "temperature_lag1",
+          "value": 300.0077,
+          "shap_value": -0.005847
+        }
+      ]
+    }
+  ]
+}

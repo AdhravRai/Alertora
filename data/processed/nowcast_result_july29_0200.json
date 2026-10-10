@@ -1,0 +1,202 @@
+{
+  "forecast_time": "2020-07-29T02:00:00",
+  "dataset": {
+    "name": "IMDAA",
+    "source_file": "data/processed/imdaa_20200729.nc",
+    "frame_count": 3,
+    "full_dataset_frame_count": 24,
+    "grid_shape": [
+      17,
+      17
+    ],
+    "latitude_range": [
+      25.08,
+      27.0
+    ],
+    "longitude_range": [
+      82.08,
+      84.0
+    ]
+  },
+  "storms": [
+    {
+      "track_id": "track_3",
+      "observation_count": 3,
+      "first_frame": 0,
+      "last_frame": 2,
+      "latest_timestamp": "2020-07-29T02:00:00",
+      "current_position": {
+        "latitude": 26.326666666666668,
+        "longitude": 82.80666666666666,
+        "grid_x": 6.055555555555555,
+        "grid_y": 10.38888888888889
+      },
+      "intensity": {
+        "max_raw": 3.265625,
+        "mean_raw": 2.8663194444444446
+      },
+      "area_pixels": 18,
+      "motion": {
+        "vx_grid_per_min": 0.047129629629629625,
+        "vy_grid_per_min": -0.008425925925925925,
+        "speed_grid_per_min": 0.04787690692531477,
+        "direction_degrees": 79.86364089398988
+      },
+      "trajectory": [
+        {
+          "lead_minutes": 30,
+          "latitude": 26.296333333333333,
+          "longitude": 82.97633333333333,
+          "grid_x": 7.469444444444444,
+          "grid_y": 10.136111111111111,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 60,
+          "latitude": 26.266000000000002,
+          "longitude": 83.146,
+          "grid_x": 8.883333333333333,
+          "grid_y": 9.883333333333333,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 90,
+          "latitude": 26.235666666666667,
+          "longitude": 83.31566666666667,
+          "grid_x": 10.29722222222222,
+          "grid_y": 9.630555555555556,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 120,
+          "latitude": 26.205333333333332,
+          "longitude": 83.48533333333333,
+          "grid_x": 11.71111111111111,
+          "grid_y": 9.377777777777778,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 180,
+          "latitude": 26.144666666666662,
+          "longitude": 83.82466666666666,
+          "grid_x": 14.538888888888888,
+          "grid_y": 8.872222222222224,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 360,
+          "latitude": 25.962666666666667,
+          "longitude": 84.0,
+          "grid_x": 23.02222222222222,
+          "grid_y": 7.355555555555556,
+          "in_domain": true
+        }
+      ]
+    }
+  ],
+  "trajectory": [
+    {
+      "track_id": "track_3",
+      "points": [
+        {
+          "lead_minutes": 30,
+          "latitude": 26.296333333333333,
+          "longitude": 82.97633333333333,
+          "grid_x": 7.469444444444444,
+          "grid_y": 10.136111111111111,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 60,
+          "latitude": 26.266000000000002,
+          "longitude": 83.146,
+          "grid_x": 8.883333333333333,
+          "grid_y": 9.883333333333333,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 90,
+          "latitude": 26.235666666666667,
+          "longitude": 83.31566666666667,
+          "grid_x": 10.29722222222222,
+          "grid_y": 9.630555555555556,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 120,
+          "latitude": 26.205333333333332,
+          "longitude": 83.48533333333333,
+          "grid_x": 11.71111111111111,
+          "grid_y": 9.377777777777778,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 180,
+          "latitude": 26.144666666666662,
+          "longitude": 83.82466666666666,
+          "grid_x": 14.538888888888888,
+          "grid_y": 8.872222222222224,
+          "in_domain": true
+        },
+        {
+          "lead_minutes": 360,
+          "latitude": 25.962666666666667,
+          "longitude": 84.0,
+          "grid_x": 23.02222222222222,
+          "grid_y": 7.355555555555556,
+          "in_domain": true
+        }
+      ]
+    }
+  ],
+  "hazards": {
+    "status": "relative_indicators_only",
+    "hazards": [
+      {
+        "type": "relative_heavy_rain",
+        "status": "detected",
+        "affected_pixels": 16,
+        "fraction_of_grid": 0.05536332179930796
+      },
+      {
+        "type": "relative_extreme_precipitation",
+        "status": "detected",
+        "affected_pixels": 3,
+        "fraction_of_grid": 0.010380622837370242
+      }
+    ],
+    "precipitation_summary": {
+      "minimum": 0.0,
+      "maximum": 3.265625,
+      "mean": 1.3554822664359862,
+      "p90": 2.59375,
+      "p95": 2.796875,
+      "p99": 3.04875
+    },
+    "units_verified": true,
+    "precipitation_units": "kg/m\u00b2",
+    "precipitation_semantics": "surface total precipitation (accumulated)"
+  },
+  "eta": {
+    "status": "not_computed",
+    "reason": "No target location was provided for ETA calculation."
+  },
+  "metadata": {
+    "forecast_leads_minutes": [
+      30,
+      60,
+      90,
+      120,
+      180,
+      360
+    ],
+    "minimum_track_observations": 3,
+    "precipitation_units": "kg/m\u00b2",
+    "precipitation_semantics": "surface total precipitation (accumulated)",
+    "timestamp_source": "NetCDF time coordinate",
+    "base_frame_index": 2,
+    "base_frame_timestamp": "2020-07-29T02:00:00",
+    "domain_check": "lat/lon coordinate bounds; no clipping",
+    "note": "02:00 is the forecast/base time. Tracking uses observations available through 02:00; future trajectory is extrapolated from the resulting motion."
+  }
+}

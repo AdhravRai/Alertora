@@ -1,0 +1,56 @@
+{
+  "event": {
+    "base_time": "2020-07-29T02:00:00",
+    "forecast_time": "2020-07-29T03:00:00",
+    "rain_threshold_kg_m2": 2.2812
+  },
+  "cell_counts": {
+    "total_cells": 289,
+    "actual_high_rain": 79,
+    "ml_predicted_high_risk": 105,
+    "fusion_predicted_high_risk": 71
+  },
+  "xgboost_metrics": {
+    "precision": 0.5619,
+    "recall": 0.7468,
+    "f1": 0.6413,
+    "confusion_matrix": [
+      [
+        164,
+        46
+      ],
+      [
+        20,
+        59
+      ]
+    ],
+    "roc_auc": 0.8218
+  },
+  "fusion_metrics": {
+    "precision": 0.7324,
+    "recall": 0.6582,
+    "f1": 0.6933,
+    "confusion_matrix": [
+      [
+        191,
+        19
+      ],
+      [
+        27,
+        52
+      ]
+    ],
+    "roc_auc": 0.8544
+  },
+  "spatial_overlap": {
+    "xgboost_true_positive_cells": 59,
+    "fusion_true_positive_cells": 52
+  },
+  "fusion_threshold": 0.5,
+  "maximum_risk_cell": {
+    "latitude": 26.16,
+    "longitude": 82.91999999999999,
+    "score": 0.736098,
+    "risk_level": "HIGH"
+  }
+}

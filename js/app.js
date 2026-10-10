@@ -49,8 +49,9 @@ mlGridLayer: null,
     alerts: document.getElementById("view-alerts"),
     precautions: document.getElementById("view-precautions"),
     eoc: document.getElementById("view-eoc"),
-    analytics: document.getElementById("view-analytics")
-  };
+    analytics: document.getElementById("view-analytics"),
+    mysafety: document.getElementById("view-mysafety")
+};
 
   // Initialize Landing Canvas Radar Animation
   initRadarCanvas();
@@ -121,6 +122,11 @@ initMySafetyEventListeners();
   // Button Listeners
   document.getElementById("btn-launch-dashboard").addEventListener("click", () => switchView("dashboard"));
   const btnExploreHow = document.getElementById("btn-explore-how");
+  if (btnExploreHow) {
+    btnExploreHow.addEventListener("click", () => {
+      switchView("dashboard");
+    });
+  }
   const btnSimStorm = document.getElementById("btn-sim-storm");
   if (btnSimStorm) btnSimStorm.addEventListener("click", toggleStormSimulation);
   document.getElementById("btn-notif-modal").addEventListener("click", toggleNotificationModal);
