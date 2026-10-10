@@ -103,9 +103,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   startHeaderClock();
   initMySafetyEventListeners();
 
-  // Button Listeners
   document.getElementById("btn-launch-dashboard").addEventListener("click", () => switchView("dashboard"));
   const btnExploreHow = document.getElementById("btn-explore-how");
+  if (btnExploreHow) {
+    btnExploreHow.addEventListener("click", () => {
+      const cardsSection = document.querySelector(".grid.grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-4");
+      if (cardsSection) {
+        cardsSection.scrollIntoView({ behavior: "smooth" });
+      } else {
+        switchView("analytics");
+      }
+    });
+  }
   const btnSimStorm = document.getElementById("btn-sim-storm");
   if (btnSimStorm) btnSimStorm.addEventListener("click", toggleStormSimulation);
   document.getElementById("btn-notif-modal").addEventListener("click", toggleNotificationModal);
