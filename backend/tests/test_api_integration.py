@@ -1,0 +1,129 @@
+"""
+Integration test suite for FastAPI REST endpoints, real-time events,
+device registration, alert dispatch, and caching headers.
+"""
+
+import pytest
+from starlette.testclient import TestClient
+
+from backend.main import app
+
+client = TestClient(app)
+
+
+def test_root_endpoint():
+    """Verify GET / endpoint returns correct branding, version, and features."""
+    response = client.get("/")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["app"] == "ALERTORA AI"
+    assert data["status"] == "ONLINE"
+    assert "version" in data
+
+
+def test_system_status_endpoint():
+    """Verify GET /api/system-status returns status, sensors, and sse status."""
+    response = client.get("/api/system-status")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "AI SYSTEM ONLINE"
+    assert "sensors" in data
+    assert "sse" in data
+
+
+def test_prediction_endpoint():
+    """Verify existing GET /api/prediction backward compatibility."""
+    response = client.get("/api/prediction?location_id=chennai&lat=13.0827&lng=80.2707")
+    assert response.status_code == 200
+    data = response.json()
+    assert "predictions" in data
+    assert "confidence" in data
+    assert "overall_risk_level" in data["predictions"]
+
+
+def test_trigger_warning_endpoint():
+    """Verify POST /api/trigger-warning works and integrates alert dispatch."""
+    response = client.post("/api/trigger-warning?district=Varanasi")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "SUCCESS"
+    assert data["district"] == "Varanasi"
+    assert "broadcast_channels" in data
+    assert "alert_id" in data
+
+
+def test_device_registration_workflow():
+    """Verify device register, list, and unregister endpoints."""
+    # 1. Register device
+    reg_payload = {
+        "device_token": "fcm_test_token_999",
+        "device_id": "phone_test_device",
+        "lat": 26.04,
+        "lng": 83.04,
+        "platform": "android",
+    }
+    res_reg = client.post("/api/notifications/register", json=reg_payload)
+    assert res_reg.status_code == 201
+    reg_data = res_reg.json()
+    assert reg_data["device_token"] == "fcm_test_token_999"
+    assert len(reg_data["geohash"]) == 6
+
+    # 2. Query devices
+    res_list = client.get("/api/notifications/devices")
+    assert res_list.status_code == 200
+    list_data = res_list.json()
+    assert list_data["registeredCount"] >= 1
+
+    # 3. Unregister device
+    res_unreg = client.post("/api/notifications/unregister", json={"device_token": "fcm_test_token_999"})
+    assert res_unreg.status_code == 200
+    assert res_unreg.json()["status"] == "SUCCESS"
+
+
+def test_alert_evaluate_and_dispatch():
+    """Verify POST /api/alerts/evaluate-and-dispatch endpoint."""
+    payload = {
+        "hazard_type": "THUNDERSTORM",
+        "severity": "CRITICAL",
+        "district": "Gorakhpur",
+        "eta": "15 mins",
+        "confidence": 95,
+        "bbox": [26.0, 83.0, 27.0, 84.0],
+    }
+    response = client.post("/api/alerts/evaluate-and-dispatch", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "SUCCESS"
+    assert data["district"] == "Gorakhpur"
+    assert "alert_id" in data
+    assert "elapsed_ms" in data
+
+
+def test_events_status_and_publish():
+    """Verify GET /api/events/status and POST /api/events/publish."""
+    res_status = client.get("/api/events/status")
+    assert res_status.status_code == 200
+    assert res_status.json()["status"] == "ONLINE"
+
+    pub_payload = {
+        "event_type": "radar_scan_completed",
+        "data": {"sweep": "0.5_deg", "reflectivityMax": 58},
+    }
+    res_pub = client.post("/api/events/publish", json=pub_payload)
+    assert res_pub.status_code == 200
+    data = res_pub.json()
+    assert data["status"] == "PUBLISHED"
+    assert data["eventType"] == "radar_scan_completed"
+
+
+def test_etag_and_caching_headers():
+    """Verify ETag header generation and 304 Not Modified validation."""
+    response = client.get("/")
+    assert response.status_code == 200
+    etag = response.headers.get("ETag")
+    assert etag is not None
+    assert "Cache-Control" in response.headers
+
+    # Send If-None-Match with matching ETag
+    conditional_response = client.get("/", headers={"If-None-Match": etag})
+    assert conditional_response.status_code == 304

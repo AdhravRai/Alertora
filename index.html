@@ -206,6 +206,9 @@
         <a href="#" data-view="alerts" class="nav-link text-gray-400 hover:text-cyan-400 px-2.5 py-1.5 rounded-t hover:bg-slate-800/40 transition flex items-center space-x-1">
           <span>🚨</span><span>Alerts</span>
         </a>
+        <a href="#" data-view="precautions" class="nav-link text-gray-400 hover:text-cyan-400 px-2.5 py-1.5 rounded-t hover:bg-slate-800/40 transition flex items-center space-x-1">
+          <span>🛡️</span><span>Safety Advisor</span>
+        </a>
         <a href="#" data-view="eoc" class="nav-link text-gray-400 hover:text-cyan-400 px-2.5 py-1.5 rounded-t hover:bg-slate-800/40 transition flex items-center space-x-1">
           <span>🏢</span><span>Government EOC</span>
         </a>
@@ -213,7 +216,7 @@
           <span>📊</span><span>Analytics</span>
         </a>
         <a href="#" data-view="mysafety" id="btn-mysafety-nav" class="nav-link text-gray-400 hover:text-cyan-400 px-2.5 py-1.5 rounded-t hover:bg-slate-800/40 transition flex items-center space-x-1">
-          <span>🛡️</span><span>My Safety</span>
+          <span>🆘</span><span>My Safety</span>
         </a>
       </nav>
 
@@ -276,13 +279,14 @@
     </div>
 
     <!-- Mobile Responsive Drawer -->
-    <div id="header-mobile-menu" class="hidden lg:hidden border-t border-slate-800/80 bg-slate-950/95 px-4 py-3 text-xs font-mono grid grid-cols-2 sm:grid-cols-3 gap-2">
+    <div id="header-mobile-menu" class="hidden lg:hidden border-t border-slate-800/80 bg-slate-950/95 px-4 py-3 text-xs font-mono grid grid-cols-2 sm:grid-cols-4 gap-2">
       <a href="#" data-view="dashboard" class="nav-link p-2 rounded bg-slate-900 text-cyan-400 border border-cyan-500/30 flex items-center space-x-1.5"><span>▣</span><span>Dashboard</span></a>
       <a href="#" data-view="map" class="nav-link p-2 rounded bg-slate-900 text-gray-300 hover:text-cyan-400 flex items-center space-x-1.5"><span>⌖</span><span>Live GIS Map</span></a>
       <a href="#" data-view="alerts" class="nav-link p-2 rounded bg-slate-900 text-gray-300 hover:text-cyan-400 flex items-center space-x-1.5"><span>🚨</span><span>Alerts</span></a>
+      <a href="#" data-view="precautions" class="nav-link p-2 rounded bg-slate-900 text-gray-300 hover:text-cyan-400 flex items-center space-x-1.5"><span>🛡️</span><span>Safety Advisor</span></a>
       <a href="#" data-view="eoc" class="nav-link p-2 rounded bg-slate-900 text-gray-300 hover:text-cyan-400 flex items-center space-x-1.5"><span>🏢</span><span>Government EOC</span></a>
       <a href="#" data-view="analytics" class="nav-link p-2 rounded bg-slate-900 text-gray-300 hover:text-cyan-400 flex items-center space-x-1.5"><span>📊</span><span>Analytics</span></a>
-      <a href="#" data-view="mysafety" class="nav-link p-2 rounded bg-slate-900 text-gray-300 hover:text-cyan-400 flex items-center space-x-1.5"><span>🛡️</span><span>My Safety</span></a>
+      <a href="#" data-view="mysafety" class="nav-link p-2 rounded bg-slate-900 text-gray-300 hover:text-cyan-400 flex items-center space-x-1.5"><span>🆘</span><span>My Safety</span></a>
     </div>
 
     <!-- ==========================================================================
@@ -306,6 +310,11 @@
 
         <span id="strip-sim-indicator" class="hidden px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-500/50 flex items-center space-x-1 animate-pulse whitespace-nowrap">
           <span>🟠 SIMULATED DATA</span>
+        </span>
+
+        <span id="strip-sse-status" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900 text-slate-400 border border-slate-700/60 flex items-center space-x-1 whitespace-nowrap transition-colors duration-300">
+          <span id="strip-sse-dot" class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+          <span id="strip-sse-text">SSE: CONNECTING</span>
         </span>
       </div>
 
@@ -538,44 +547,129 @@
          VIEW E: AI SAFETY ADVISOR (PRECAUTIONS)
          ========================================================================== -->
     <div id="view-precautions" class="hidden space-y-6">
-      <div class="glass-panel p-5 rounded-xl border-slate-800">
-        <h2 class="text-xl font-bold text-white font-mono mb-2">AI SAFETY ADVISOR & PRECAUTIONS ENGINE</h2>
-        <p class="text-xs text-gray-400 font-mono mb-4">Context-aware hazard response procedures automatically generated for government operations and public citizens.</p>
+      <!-- Quick Navigation Header Bar -->
+      <div class="glass-panel p-3.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+        <div class="flex items-center space-x-2">
+          <button onclick="window.switchAppView('dashboard')" class="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500 hover:text-black text-cyan-400 border border-cyan-500/40 font-bold transition flex items-center space-x-1.5 shadow-sm shadow-cyan-500/10 cursor-pointer">
+            <span>←</span><span>Back to Dashboard</span>
+          </button>
+          <span class="text-gray-500">|</span>
+          <span class="text-gray-400">Quick Navigation:</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="window.switchAppView('map')" class="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-gray-300 hover:text-cyan-400 border border-slate-800 transition flex items-center space-x-1 cursor-pointer">
+            <span>⌖</span><span>Live GIS Map</span>
+          </button>
+          <button onclick="window.switchAppView('alerts')" class="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-gray-300 hover:text-red-400 border border-slate-800 transition flex items-center space-x-1 cursor-pointer">
+            <span>🚨</span><span>Alerts Feed</span>
+          </button>
+          <button onclick="window.switchAppView('eoc')" class="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-gray-300 hover:text-amber-400 border border-slate-800 transition flex items-center space-x-1 cursor-pointer">
+            <span>🏢</span><span>Government EOC</span>
+          </button>
+          <button onclick="window.switchAppView('mysafety')" class="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-gray-300 hover:text-emerald-400 border border-slate-800 transition flex items-center space-x-1 cursor-pointer">
+            <span>🆘</span><span>My Safety</span>
+          </button>
+        </div>
+      </div>
 
-        <!-- Hazard Selector Buttons -->
-        <div class="flex flex-wrap gap-2 mb-6">
-          <button data-hazard="THUNDERSTORM" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-cyan-500 text-black">⛈ THUNDERSTORM</button>
-          <button data-hazard="LIGHTNING" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300">⚡ LIGHTNING</button>
-          <button data-hazard="HAIL" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300">🧊 HAIL</button>
-          <button data-hazard="CLOUDBURST" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300">🌧 CLOUDBURST</button>
-          <button data-hazard="DOWNBURST" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300">💨 DOWNBURST WIND</button>
+      <div class="glass-panel p-5 rounded-xl border-slate-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-xl font-bold text-white font-mono flex items-center space-x-2">
+              <span class="text-cyan-400">🛡️</span>
+              <span>AI SAFETY ADVISOR & PRECAUTIONS ENGINE</span>
+            </h2>
+            <p class="text-xs text-gray-400 font-mono mt-1">Context-aware hazard response procedures automatically generated for government operations and public citizens.</p>
+          </div>
+          <!-- Action Buttons Toolbar -->
+          <div class="flex items-center space-x-2">
+            <button onclick="window.copyPrecautionSOP()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-mono font-bold transition flex items-center space-x-1 cursor-pointer">
+              <span>📋</span><span>Copy SOP</span>
+            </button>
+            <button onclick="window.triggerPrecautionBroadcast()" class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-mono font-bold transition flex items-center space-x-1 shadow-md shadow-red-600/30 cursor-pointer">
+              <span>📢</span><span>Broadcast Warning</span>
+            </button>
+            <button onclick="window.print()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-gray-400 hover:text-white border border-slate-800 text-xs font-mono transition cursor-pointer" title="Print SOP">
+              <span>🖨️</span>
+            </button>
+          </div>
         </div>
 
-        <div class="text-sm font-bold text-cyan-400 font-mono uppercase mb-4" id="precaution-hazard-title">
-          Severe Thunderstorm Recommendations
+        <!-- Hazard Selector Buttons (Clickable & Responsive) -->
+        <div class="mb-6">
+          <div class="text-[11px] font-mono text-gray-400 uppercase mb-2">Select Active Convective Hazard:</div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="window.selectPrecautionHazard('THUNDERSTORM')" data-hazard="THUNDERSTORM" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-cyan-500 text-black cursor-pointer transition">⛈ THUNDERSTORM</button>
+            <button onclick="window.selectPrecautionHazard('LIGHTNING')" data-hazard="LIGHTNING" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300 hover:text-cyan-400 border border-slate-700 cursor-pointer transition">⚡ LIGHTNING</button>
+            <button onclick="window.selectPrecautionHazard('HAIL')" data-hazard="HAIL" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300 hover:text-cyan-400 border border-slate-700 cursor-pointer transition">🧊 HAIL</button>
+            <button onclick="window.selectPrecautionHazard('CLOUDBURST')" data-hazard="CLOUDBURST" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300 hover:text-cyan-400 border border-slate-700 cursor-pointer transition">🌧 CLOUDBURST</button>
+            <button onclick="window.selectPrecautionHazard('DOWNBURST')" data-hazard="DOWNBURST" class="precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300 hover:text-cyan-400 border border-slate-700 cursor-pointer transition">💨 DOWNBURST WIND</button>
+          </div>
+        </div>
+
+        <div class="text-sm font-bold text-cyan-400 font-mono uppercase mb-4 flex items-center justify-between" id="precaution-hazard-title-container">
+          <span id="precaution-hazard-title">Severe Thunderstorm Recommendations</span>
+          <span class="text-[11px] font-normal text-gray-400 normal-case">Updated based on latest convective radar & satellite fusion</span>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Government / EOC Precautions -->
-          <div class="glass-panel p-5 rounded-xl border-slate-800">
-            <div class="flex items-center space-x-2 text-sm font-bold text-cyan-400 font-mono mb-4 pb-2 border-b border-slate-800">
-              <span>🏛</span>
-              <span>GOVERNMENT & EMERGENCY OPERATIONS (EOC)</span>
+          <div class="glass-panel p-5 rounded-xl border-slate-800 bg-slate-950/40">
+            <div class="flex items-center justify-between text-sm font-bold text-cyan-400 font-mono mb-4 pb-2 border-b border-slate-800">
+              <div class="flex items-center space-x-2">
+                <span>🏛</span>
+                <span>GOVERNMENT & EMERGENCY OPERATIONS (EOC)</span>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30">MANDATORY PROTOCOL</span>
             </div>
-            <ul id="precautions-govt-list" class="space-y-3">
+            <ul id="precautions-govt-list" class="space-y-3 font-mono">
               <!-- Populated by JS -->
             </ul>
           </div>
 
           <!-- Public / Citizen Precautions -->
-          <div class="glass-panel p-5 rounded-xl border-slate-800">
-            <div class="flex items-center space-x-2 text-sm font-bold text-emerald-400 font-mono mb-4 pb-2 border-b border-slate-800">
-              <span>👤</span>
-              <span>PUBLIC SAFETY & CITIZENS ACTION PLAN</span>
+          <div class="glass-panel p-5 rounded-xl border-slate-800 bg-slate-950/40">
+            <div class="flex items-center justify-between text-sm font-bold text-emerald-400 font-mono mb-4 pb-2 border-b border-slate-800">
+              <div class="flex items-center space-x-2">
+                <span>👤</span>
+                <span>PUBLIC SAFETY & CITIZENS ACTION PLAN</span>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30">CITIZEN ADVISORY</span>
             </div>
-            <ul id="precautions-public-list" class="space-y-3">
+            <ul id="precautions-public-list" class="space-y-3 font-mono">
               <!-- Populated by JS -->
             </ul>
+          </div>
+        </div>
+
+        <!-- Emergency Response Actions Grid at Bottom -->
+        <div class="mt-6 pt-4 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+          <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="text-gray-400 text-[10px]">COMMUNITY RELIEF</div>
+              <div class="font-bold text-white">Shelter Navigator</div>
+            </div>
+            <button onclick="window.switchAppView('map')" class="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500 hover:text-black font-bold transition cursor-pointer">
+              Open Map →
+            </button>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="text-gray-400 text-[10px]">DISTRICT COMMAND</div>
+              <div class="font-bold text-white">EOC Risk Grid</div>
+            </div>
+            <button onclick="window.switchAppView('eoc')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-black font-bold transition cursor-pointer">
+              Open EOC →
+            </button>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="text-gray-400 text-[10px]">SURVIVAL CHECKLIST</div>
+              <div class="font-bold text-white">Personal Go-Bag</div>
+            </div>
+            <button onclick="window.switchAppView('mysafety')" class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-black font-bold transition cursor-pointer">
+              Open My Safety →
+            </button>
           </div>
         </div>
       </div>

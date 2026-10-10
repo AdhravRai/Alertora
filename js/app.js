@@ -64,6 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     alerts: document.getElementById("view-alerts"),
     precautions: document.getElementById("view-precautions"),
     eoc: document.getElementById("view-eoc"),
+    mysafety: document.getElementById("view-mysafety"),
     analytics: document.getElementById("view-analytics")
   };
 
@@ -102,6 +103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderNotificationDropdown();
   startHeaderClock();
   initMySafetyEventListeners();
+  setupNavigation();
 
   document.getElementById("btn-launch-dashboard").addEventListener("click", () => switchView("dashboard"));
   const btnExploreHow = document.getElementById("btn-explore-how");
@@ -1032,7 +1034,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.map = L.map("gis-map-container", {
         center: [26.04, 83.04],
         zoom: 8,
-        zoomControl: true
+        zoomControl: true,
+        preferCanvas: true
       });
 
       L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2yvu_1_f62f658f13e311deee9199e7", {
@@ -1058,7 +1061,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.fullscreenMap = L.map("gis-map-fullscreen", {
         center: [26.04, 83.04],
         zoom: 8,
-        zoomControl: true
+        zoomControl: true,
+        preferCanvas: true
       });
 
       L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2yvu_1_f62f658f13e311deee9199e7", {
@@ -1293,46 +1297,53 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Render AI Safety Precautions View
   function renderPrecautionsView(hazardKey) {
+    hazardKey = (hazardKey || state.selectedHazard || "THUNDERSTORM").toUpperCase();
+    state.selectedHazard = hazardKey;
     const hazardData = ALERTORA_DATA.precautionsDatabase[hazardKey] || ALERTORA_DATA.precautionsDatabase["THUNDERSTORM"];
 
     // Update buttons active state
     document.querySelectorAll(".precaution-hazard-btn").forEach(btn => {
       if (btn.dataset.hazard === hazardKey) {
-        btn.classList.add("bg-cyan-500", "text-black", "font-bold");
-        btn.classList.remove("bg-slate-800", "text-gray-300");
+        btn.className = "precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-cyan-500 text-black cursor-pointer transition shadow-md shadow-cyan-500/20";
       } else {
-        btn.classList.remove("bg-cyan-500", "text-black", "font-bold");
-        btn.classList.add("bg-slate-800", "text-gray-300");
+        btn.className = "precaution-hazard-btn px-4 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800 text-gray-300 hover:text-cyan-400 border border-slate-700 cursor-pointer transition";
       }
     });
 
-    document.getElementById("precaution-hazard-title").textContent = hazardData.hazard;
+    const titleEl = document.getElementById("precaution-hazard-title");
+    if (titleEl) {
+      titleEl.textContent = `${hazardData.hazard} Recommendations`;
+    }
 
     // Render Govt Precautions
     const govtContainer = document.getElementById("precautions-govt-list");
-    govtContainer.innerHTML = "";
-    hazardData.government.forEach((item, i) => {
-      const li = document.createElement("li");
-      li.className = "flex items-start space-x-3 text-sm text-gray-300";
-      li.innerHTML = `
-        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-400 font-bold text-xs flex items-center justify-center font-mono">${i + 1}</span>
-        <span>${item}</span>
-      `;
-      govtContainer.appendChild(li);
-    });
+    if (govtContainer) {
+      govtContainer.innerHTML = "";
+      hazardData.government.forEach((item, i) => {
+        const li = document.createElement("li");
+        li.className = "flex items-start space-x-3 text-xs text-gray-200 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 hover:border-cyan-500/30 transition";
+        li.innerHTML = `
+          <span class="flex-shrink-0 w-5 h-5 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-400 font-bold text-[10px] flex items-center justify-center font-mono">${i + 1}</span>
+          <span>${item}</span>
+        `;
+        govtContainer.appendChild(li);
+      });
+    }
 
     // Render Public Precautions
     const publicContainer = document.getElementById("precautions-public-list");
-    publicContainer.innerHTML = "";
-    hazardData.public.forEach((item, i) => {
-      const li = document.createElement("li");
-      li.className = "flex items-start space-x-3 text-sm text-gray-300";
-      li.innerHTML = `
-        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center font-mono">✓</span>
-        <span>${item}</span>
-      `;
-      publicContainer.appendChild(li);
-    });
+    if (publicContainer) {
+      publicContainer.innerHTML = "";
+      hazardData.public.forEach((item, i) => {
+        const li = document.createElement("li");
+        li.className = "flex items-start space-x-3 text-xs text-gray-200 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 hover:border-emerald-500/30 transition";
+        li.innerHTML = `
+          <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 font-bold text-[10px] flex items-center justify-center font-mono">✓</span>
+          <span>${item}</span>
+        `;
+        publicContainer.appendChild(li);
+      });
+    }
   }
 
   // Render Emergency Alerts View
@@ -1594,15 +1605,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Render Public Safety Mode ("My Safety")
-  function renderMySafetyView() {
-    const loc = ALERTORA_DATA.locations.find(l => l.id === state.selectedLocationId) || ALERTORA_DATA.locations[0];
-
-    document.getElementById("mysafety-loc-name").textContent = loc.name;
-    document.getElementById("mysafety-risk-banner").className = `p-4 rounded-xl border mb-6 flex items-center justify-between ${getRiskBadgeClass(loc.currentRisk)}`;
-    document.getElementById("mysafety-risk-text").textContent = `⚠️ ${loc.currentRisk} ${loc.nextHazardType.toUpperCase()} ALERT`;
-  }
-
 
 
   // Render Analytics Page Charts using Chart.js
@@ -1659,24 +1661,79 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Setup Navigation Clicks
+  // Setup Navigation Clicks & Global Actions
   function setupNavigation() {
+    // 1. Navigation Links (Desktop & Mobile Drawer)
     document.querySelectorAll(".nav-link").forEach(link => {
       link.addEventListener("click", (e) => {
         e.preventDefault();
         const targetView = link.dataset.view;
-        switchView(targetView);
+        if (targetView) {
+          switchView(targetView);
+          // Auto close mobile drawer if open
+          const mobileMenu = document.getElementById("header-mobile-menu");
+          if (mobileMenu && !mobileMenu.classList.contains("hidden")) {
+            mobileMenu.classList.add("hidden");
+          }
+        }
       });
     });
 
+    // 2. Precaution Hazard Selection Buttons
     document.querySelectorAll(".precaution-hazard-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        state.selectedHazard = btn.dataset.hazard;
-        renderPrecautionsView(state.selectedHazard);
+        const hazard = btn.dataset.hazard;
+        if (hazard) {
+          state.selectedHazard = hazard.toUpperCase();
+          renderPrecautionsView(state.selectedHazard);
+        }
       });
     });
 
+    // 3. Global Window Helpers
     window.switchAppView = switchView;
+
+    window.selectPrecautionHazard = function(hazardKey) {
+      if (!hazardKey) return;
+      state.selectedHazard = hazardKey.toUpperCase();
+      renderPrecautionsView(state.selectedHazard);
+    };
+
+    window.copyPrecautionSOP = function() {
+      const hazardKey = state.selectedHazard || "THUNDERSTORM";
+      const hazardData = ALERTORA_DATA.precautionsDatabase[hazardKey] || ALERTORA_DATA.precautionsDatabase["THUNDERSTORM"];
+      let text = `ALERTORA AI — STANDARD OPERATING PROCEDURE (SOP)\n`;
+      text += `HAZARD: ${hazardData.hazard}\n\n`;
+      text += `[GOVERNMENT & EOC PROTOCOLS]\n`;
+      hazardData.government.forEach((g, i) => { text += `${i + 1}. ${g}\n`; });
+      text += `\n[PUBLIC CITIZEN ACTION PLAN]\n`;
+      hazardData.public.forEach((p, i) => { text += `${i + 1}. ${p}\n`; });
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast("SOP COPIED", `${hazardData.hazard} Emergency Protocols copied to clipboard`, "CYAN");
+        }).catch(() => {
+          showToast("SOP READY", `${hazardData.hazard} Protocols ready`, "CYAN");
+        });
+      } else {
+        showToast("SOP READY", `${hazardData.hazard} Protocols ready`, "CYAN");
+      }
+    };
+
+    window.triggerPrecautionBroadcast = function() {
+      const hazardKey = state.selectedHazard || "THUNDERSTORM";
+      const district = state.selectedLocationId === "gps-current" && state.gpsLocationData 
+        ? state.gpsLocationData.name 
+        : (ALERTORA_DATA.locations.find(l => l.id === state.selectedLocationId)?.name || "IMDAA Monitored Sector");
+
+      if (window.alertoraAPI && typeof window.alertoraAPI.triggerPublicWarning === "function") {
+        window.alertoraAPI.triggerPublicWarning(district).then(res => {
+          showToast("PUBLIC WARNING DISPATCHED", `Emergency siren & broadcast alert sent to ${district} for ${hazardKey}`, "RED");
+        });
+      } else {
+        showToast("WARNING DISPATCHED", `Emergency advisory broadcast for ${district}`, "RED");
+      }
+    };
   }
 
   // Notification Dropdown Drawer Toggle
@@ -1884,6 +1941,118 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     draw();
   }
+
+  // ==============================================================================
+  // REAL-TIME SERVER-SENT EVENTS (SSE) INTEGRATION & DYNAMIC UPDATES
+  // ==============================================================================
+  function updateSSEStatusBadge(status) {
+    const badge = document.getElementById("strip-sse-status");
+    const dot = document.getElementById("strip-sse-dot");
+    const text = document.getElementById("strip-sse-text");
+    if (!badge || !dot || !text) return;
+
+    badge.className = "px-2 py-0.5 rounded text-[10px] font-bold border flex items-center space-x-1 whitespace-nowrap transition-colors duration-300 ";
+
+    if (status === "CONNECTED") {
+      badge.className += "bg-emerald-950/90 text-emerald-300 border-emerald-500/50";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse";
+      text.textContent = "SSE: LIVE";
+    } else if (status === "RECONNECTING") {
+      badge.className += "bg-amber-950/90 text-amber-300 border-amber-500/50";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping";
+      text.textContent = "SSE: RECONNECTING";
+    } else {
+      badge.className += "bg-slate-900 text-slate-400 border-slate-700/60";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-slate-500";
+      text.textContent = "SSE: OFFLINE";
+    }
+  }
+
+  function showRealTimeAlertToast(alertData) {
+    const toast = document.createElement("div");
+    toast.className = "fixed bottom-5 right-5 z-50 max-w-md p-4 rounded-xl shadow-2xl border-2 border-red-500/80 bg-slate-950/95 backdrop-blur-md text-white font-mono animate-bounce";
+    toast.innerHTML = `
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-red-600 text-white uppercase">${alertData.severity || 'CRITICAL'} ALERT</span>
+        <span class="text-[11px] text-gray-400">REAL-TIME DISPATCH</span>
+      </div>
+      <div class="font-bold text-sm text-red-200 mb-1">${alertData.title || 'Severe Weather Warning'}</div>
+      <div class="text-xs text-gray-300 mb-2">${alertData.summary || ''}</div>
+      <div class="text-[11px] text-amber-300 mb-2">ETA: ${alertData.eta || 'Immediate'} | Sector: ${alertData.location || alertData.district || 'Domain'}</div>
+      <div class="flex justify-end space-x-2">
+        <button onclick="this.closest('.fixed').remove()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded text-gray-300">Dismiss</button>
+      </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 12000);
+  }
+
+  function setupRealTimeSSE() {
+    if (!window.alertoraAPI) return;
+
+    // Generate or retrieve persistent web client token
+    let clientToken = localStorage.getItem("alertora_device_token");
+    if (!clientToken) {
+      clientToken = "web_" + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem("alertora_device_token", clientToken);
+    }
+
+    // Register device location for geohash targeting
+    const clientLat = state.gpsLocationData ? state.gpsLocationData.lat : 26.04;
+    const clientLng = state.gpsLocationData ? state.gpsLocationData.lng : 83.04;
+    window.alertoraAPI.registerDevice(clientToken, clientLat, clientLng, "web");
+
+    window.alertoraAPI.initSSEConnection({
+      onStateChange: (connectionState) => {
+        updateSSEStatusBadge(connectionState);
+      },
+      onForecastUpdated: (data) => {
+        console.log("[ALERTORA SSE] Convective forecast updated event received:", data);
+        loadJuly29DataAndRenderMap();
+      },
+      onRiskZonesUpdated: (data) => {
+        console.log("[ALERTORA SSE] Risk zones updated event received:", data);
+        loadJuly29DataAndRenderMap();
+      },
+      onStormTrajectoryUpdated: (data) => {
+        console.log("[ALERTORA SSE] Storm trajectory updated event received:", data);
+        loadJuly29DataAndRenderMap();
+      },
+      onAlertCreated: (alertData) => {
+        console.log("[ALERTORA SSE] Real-time emergency alert dispatched:", alertData);
+        if (typeof ALERTORA_DATA !== "undefined" && ALERTORA_DATA.alertsFeed) {
+          ALERTORA_DATA.alertsFeed.unshift({
+            id: alertData.id || "ALT-" + Date.now(),
+            severity: alertData.severity === "CRITICAL" ? "RED" : (alertData.severity === "HIGH" ? "ORANGE" : "YELLOW"),
+            title: alertData.title || "Severe Storm Alert",
+            location: alertData.location || "IMDAA Sector",
+            timestamp: new Date().toLocaleTimeString(),
+            eta: alertData.eta || "20 mins",
+            confidence: alertData.confidence || 90,
+            hazardTypes: alertData.hazardTypes || ["THUNDERSTORM"],
+            summary: alertData.summary || "Severe weather approaching.",
+            action: alertData.action || "Seek immediate shelter."
+          });
+          if (state.currentView === "alerts") {
+            renderAlertsView();
+          }
+        }
+        showRealTimeAlertToast(alertData);
+      },
+      onSystemStatusUpdated: (data) => {
+        console.log("[ALERTORA SSE] System status update:", data);
+      },
+      onHeartbeat: (hb) => {
+        const clockEl = document.getElementById("strip-update-clock");
+        if (clockEl) {
+          clockEl.textContent = `LAST SYNC: ${new Date().toLocaleTimeString()}`;
+        }
+      }
+    });
+  }
+
+  // Initialize Real-Time SSE
+  setupRealTimeSSE();
 
   // Set default view
   switchView("dashboard");
