@@ -7,8 +7,12 @@ class AlertoraAPIService {
   constructor() {
     // FastAPI backend is active for development integration
     this.useLiveBackend = true;
-    this.baseURL = "http://localhost:8000/api";
+    const host = (typeof window !== "undefined" && window.location && window.location.hostname && window.location.hostname !== "")
+      ? window.location.hostname
+      : "localhost";
+    this.baseURL = `http://${host}:8000/api`;
   }
+
 
   // ------------------------------------------------------------------------
   // Fetch System Status

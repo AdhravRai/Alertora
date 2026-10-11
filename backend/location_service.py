@@ -190,11 +190,42 @@ class LocationAnalysisService:
                         "formatted_label": f"{name}, {admin1} ({country})",
                     })
 
-                return suggestions
+                if suggestions:
+                    return suggestions
 
         except Exception as e:
             logger.warning(f"[LocationService] Geocoding API lookup failed for '{query}': {e}")
-            return []
+
+        # Robust Fallback for Well-Known Cities
+        clean_q = query.lower().split(",")[0].strip()
+        fallback_catalog = {
+            "chennai": {"name": "Chennai", "district": "Chennai", "state": "Tamil Nadu", "country": "India", "lat": 13.0827, "lon": 80.2707},
+            "gorakhpur": {"name": "Gorakhpur", "district": "Gorakhpur", "state": "Uttar Pradesh", "country": "India", "lat": 26.7663, "lon": 83.3689},
+            "mumbai": {"name": "Mumbai", "district": "Mumbai", "state": "Maharashtra", "country": "India", "lat": 19.0760, "lon": 72.8777},
+            "delhi": {"name": "Delhi", "district": "Delhi", "state": "Delhi", "country": "India", "lat": 28.6139, "lon": 77.2090},
+            "tiruvallur": {"name": "Tiruvallur", "district": "Tiruvallur", "state": "Tamil Nadu", "country": "India", "lat": 13.1432, "lon": 79.9079},
+            "kanchipuram": {"name": "Kanchipuram", "district": "Kanchipuram", "state": "Tamil Nadu", "country": "India", "lat": 12.8342, "lon": 79.7036},
+            "coimbatore": {"name": "Coimbatore", "district": "Coimbatore", "state": "Tamil Nadu", "country": "India", "lat": 11.0168, "lon": 76.9558},
+            "madurai": {"name": "Madurai", "district": "Madurai", "state": "Tamil Nadu", "country": "India", "lat": 9.9252, "lon": 78.1198},
+        }
+
+        for key, info in fallback_catalog.items():
+            if key in clean_q or clean_q in key:
+                in_dom = self.is_in_imdaa_domain(info["lat"], info["lon"])
+                return [{
+                    "id": f"{info['lat']:.4f}_{info['lon']:.4f}",
+                    "name": info["name"],
+                    "district": info["district"],
+                    "state": info["state"],
+                    "country": info["country"],
+                    "latitude": info["lat"],
+                    "longitude": info["lon"],
+                    "in_model_domain": in_dom,
+                    "formatted_label": f"{info['name']}, {info['state']} ({info['country']})",
+                }]
+
+        return []
+
 
     def _reverse_geocode(self, lat: float, lon: float) -> Dict[str, Any]:
         """Resolves latitude/longitude pair into administrative name."""

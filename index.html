@@ -413,7 +413,9 @@
 
             <button
               id="btn-analyze-location"
-              class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold font-mono text-xs md:text-sm rounded-lg transition flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/20"
+              type="button"
+              onclick="window.executeLocationAnalysis ? window.executeLocationAnalysis(event) : null"
+              class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold font-mono text-xs md:text-sm rounded-lg transition flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/20 cursor-pointer"
             >
               <span id="analyze-spinner" class="hidden w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
               <span id="analyze-btn-text">⚡ Analyze Location</span>
@@ -433,19 +435,20 @@
         <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
           <div class="flex flex-wrap items-center gap-1.5 text-gray-400">
             <span>Quick Select:</span>
-            <button type="button" class="quick-loc-chip px-2.5 py-1 rounded bg-slate-800 hover:bg-cyan-950 hover:text-cyan-300 text-gray-300 border border-slate-700 transition" data-query="Gorakhpur, Uttar Pradesh">
+            <button type="button" class="quick-loc-chip px-2.5 py-1 rounded bg-slate-800 hover:bg-cyan-950 hover:text-cyan-300 text-gray-300 border border-slate-700 transition cursor-pointer" data-query="Gorakhpur, Uttar Pradesh" onclick="window.selectQuickLocation ? window.selectQuickLocation('Gorakhpur, Uttar Pradesh') : null">
               📍 Gorakhpur, UP <span class="text-[10px] text-cyan-400 font-bold">(In-Domain)</span>
             </button>
-            <button type="button" class="quick-loc-chip px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700 transition" data-query="Chennai, Tamil Nadu">
+            <button type="button" class="quick-loc-chip px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700 transition cursor-pointer" data-query="Chennai, Tamil Nadu" onclick="window.selectQuickLocation ? window.selectQuickLocation('Chennai, Tamil Nadu') : null">
               📍 Chennai, TN
             </button>
-            <button type="button" class="quick-loc-chip px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700 transition" data-query="Mumbai, Maharashtra">
+            <button type="button" class="quick-loc-chip px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700 transition cursor-pointer" data-query="Mumbai, Maharashtra" onclick="window.selectQuickLocation ? window.selectQuickLocation('Mumbai, Maharashtra') : null">
               📍 Mumbai, MH
             </button>
-            <button type="button" class="quick-loc-chip px-2.5 py-1 rounded bg-slate-800 hover:bg-cyan-950 hover:text-cyan-300 text-gray-300 border border-slate-700 transition" data-query="26.7663, 83.3689">
+            <button type="button" class="quick-loc-chip px-2.5 py-1 rounded bg-slate-800 hover:bg-cyan-950 hover:text-cyan-300 text-gray-300 border border-slate-700 transition cursor-pointer" data-query="26.7663, 83.3689" onclick="window.selectQuickLocation ? window.selectQuickLocation('26.7663, 83.3689') : null">
               📍 26.76, 83.37 <span class="text-[10px] text-cyan-400 font-bold">(Coords)</span>
             </button>
           </div>
+
 
           <div id="location-domain-badge" class="hidden items-center space-x-1.5 px-2.5 py-1 rounded text-[11px] font-bold">
             <!-- Populated via JS -->
@@ -1340,9 +1343,10 @@
 
   <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3"></div>
 
-  <!-- Application Scripts -->
-  <script src="js/mockData.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Application Scripts (Cache Busted) -->
+  <script src="js/mockData.js?v=2.5.4"></script>
+  <script src="js/api.js?v=2.5.4"></script>
+  <script src="js/app.js?v=2.5.4"></script>
 </body>
 </html>
+

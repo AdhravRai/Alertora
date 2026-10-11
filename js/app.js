@@ -2654,51 +2654,99 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     });
 
-    async function executeAnalysis() {
-      let candidate = state.selectedLocationCandidate;
+    async function executeAnalysis(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      console.log("[LocationAnalysis] executeAnalysis invoked");
 
-      if (!candidate && input) {
-        const text = input.value.trim();
-        if (!text) {
-          showToast("INPUT REQUIRED", "Please enter a location name or coordinates.", "CYAN");
-          return;
-        }
+      const currentInput = document.getElementById("location-search-input") || input;
+      const currentBtn = document.getElementById("btn-analyze-location") || analyzeBtn;
+      const currentSpinner = document.getElementById("analyze-spinner") || spinner;
+      const currentBtnText = document.getElementById("analyze-btn-text") || btnText;
+      const curList = document.getElementById("location-autocomplete-list") || list;
+      if (curList) curList.classList.add("hidden");
 
-        // Check if coordinate regex
-        const coordParts = text.split(",");
-        if (coordParts.length === 2 && !isNaN(parseFloat(coordParts[0])) && !isNaN(parseFloat(coordParts[1]))) {
-          const lat = parseFloat(coordParts[0].trim());
-          const lon = parseFloat(coordParts[1].trim());
-          candidate = {
-            latitude: lat,
-            longitude: lon,
-            name: `Coordinate (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`,
-            district: `Coord_${lat.toFixed(2)}_${lon.toFixed(2)}`,
-            state: "",
-            country: "India",
-            in_model_domain: isInsideImdaaDomain(lat, lon)
-          };
-        } else {
-          // Look up candidate
-          const results = await window.alertoraAPI.searchLocations(text);
-          if (results && results.length > 0) {
-            candidate = results[0];
-            selectCandidate(candidate);
-          } else {
-            showToast("LOCATION NOT FOUND", `Could not resolve "${text}". Try another place name or coordinates.`, "RED");
-            return;
-          }
-        }
+      let text = (currentInput ? currentInput.value : "").trim();
+      if (!text && !state.selectedLocationCandidate) {
+        showToast("INPUT REQUIRED", "Please enter a location name or coordinates.", "CYAN");
+        return;
       }
 
-      if (!candidate) return;
-
-      // Set loading state
-      if (analyzeBtn) analyzeBtn.disabled = true;
-      if (spinner) spinner.classList.remove("hidden");
-      if (btnText) btnText.textContent = "Analyzing Weather & ML Model...";
+      // Immediately activate visual loading state on button
+      if (currentBtn) currentBtn.disabled = true;
+      if (currentSpinner) currentSpinner.classList.remove("hidden");
+      if (currentBtnText) currentBtnText.textContent = "Analyzing Weather & ML Model...";
 
       try {
+        let candidate = state.selectedLocationCandidate;
+
+        // If no candidate is selected or the text in input does not match current candidate
+        if (!candidate || (currentInput && text !== (candidate.formatted_label || candidate.name))) {
+          // Check if coordinate regex
+          const coordParts = text.split(",");
+          if (coordParts.length === 2 && !isNaN(parseFloat(coordParts[0])) && !isNaN(parseFloat(coordParts[1]))) {
+            const lat = parseFloat(coordParts[0].trim());
+            const lon = parseFloat(coordParts[1].trim());
+            candidate = {
+              latitude: lat,
+              longitude: lon,
+              name: `Coordinate (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`,
+              district: `Coord_${lat.toFixed(2)}_${lon.toFixed(2)}`,
+              state: "",
+              country: "India",
+              in_model_domain: isInsideImdaaDomain(lat, lon)
+            };
+          } else {
+            console.log("[LocationAnalysis] Resolving location via search API for:", text);
+            let results = [];
+            try {
+              results = await window.alertoraAPI.searchLocations(text);
+            } catch (err) {
+              console.warn("[LocationAnalysis] searchLocations API error:", err);
+            }
+
+            if (results && results.length > 0) {
+              candidate = results[0];
+              selectCandidate(candidate);
+            } else {
+              // Direct fallback dictionary for popular locations
+              const cleanKey = text.toLowerCase().split(",")[0].trim();
+              const fallbackMap = {
+                "chennai": { name: "Chennai", district: "Chennai", state: "Tamil Nadu", latitude: 13.0827, longitude: 80.2707 },
+                "gorakhpur": { name: "Gorakhpur", district: "Gorakhpur", state: "Uttar Pradesh", latitude: 26.7663, longitude: 83.3689 },
+                "mumbai": { name: "Mumbai", district: "Mumbai", state: "Maharashtra", latitude: 19.0760, longitude: 72.8777 },
+                "delhi": { name: "Delhi", district: "Delhi", state: "Delhi", latitude: 28.6139, longitude: 77.2090 },
+                "tiruvallur": { name: "Tiruvallur", district: "Tiruvallur", state: "Tamil Nadu", latitude: 13.1432, longitude: 79.9079 },
+                "kanchipuram": { name: "Kanchipuram", district: "Kanchipuram", state: "Tamil Nadu", latitude: 12.8342, longitude: 79.7036 },
+                "coimbatore": { name: "Coimbatore", district: "Coimbatore", state: "Tamil Nadu", latitude: 11.0168, longitude: 76.9558 },
+                "madurai": { name: "Madurai", district: "Madurai", state: "Tamil Nadu", latitude: 9.9252, longitude: 78.1198 }
+              };
+
+              let fb = null;
+              for (const [k, v] of Object.entries(fallbackMap)) {
+                if (k.includes(cleanKey) || cleanKey.includes(k)) {
+                  fb = v;
+                  break;
+                }
+              }
+
+              if (fb) {
+                candidate = {
+                  ...fb,
+                  country: "India",
+                  in_model_domain: isInsideImdaaDomain(fb.latitude, fb.longitude)
+                };
+                selectCandidate(candidate);
+              } else {
+                showToast("LOCATION NOT FOUND", `Could not resolve "${text}". Try another place or lat, lon coordinates.`, "RED");
+                return;
+              }
+            }
+          }
+        }
+
+        if (!candidate) return;
+
+        console.log("[LocationAnalysis] Posting analysis payload for:", candidate);
         const payload = {
           latitude: candidate.latitude,
           longitude: candidate.longitude,
@@ -2709,6 +2757,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
 
         const response = await window.alertoraAPI.analyzeLocation(payload);
+        console.log("[LocationAnalysis] Received response:", response);
 
         if (response && response.status === "SUCCESS") {
           const tableRow = response.table_row;
@@ -2743,8 +2792,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
 
           // Populate Dashboard Result Banner
-          if (resultCard) {
-            resultCard.classList.remove("hidden");
+          const curResultCard = document.getElementById("analysis-result-card") || resultCard;
+          if (curResultCard) {
+            curResultCard.classList.remove("hidden");
             const resTitle = document.getElementById("analysis-loc-title");
             if (resTitle) resTitle.textContent = `${evidence.location.name}${evidence.location.state ? ', ' + evidence.location.state : ''}`;
 
@@ -2824,13 +2874,26 @@ document.addEventListener("DOMContentLoaded", async () => {
           );
         }
       } catch (err) {
+        console.error("[LocationAnalysis] Execution error:", err);
         showToast("ANALYSIS ERROR", err.message || "Failed to analyze weather data.", "RED");
       } finally {
-        if (analyzeBtn) analyzeBtn.disabled = false;
-        if (spinner) spinner.classList.add("hidden");
-        if (btnText) btnText.textContent = "⚡ Analyze Location";
+        if (currentBtn) currentBtn.disabled = false;
+        if (currentSpinner) currentSpinner.classList.add("hidden");
+        if (currentBtnText) currentBtnText.textContent = "⚡ Analyze Location";
       }
     }
+
+    window.executeLocationAnalysis = executeAnalysis;
+
+    window.selectQuickLocation = async function(query) {
+      console.log("[LocationAnalysis] selectQuickLocation clicked:", query);
+      const curInput = document.getElementById("location-search-input") || input;
+      const curClear = document.getElementById("location-search-clear") || clearBtn;
+      if (curInput) curInput.value = query;
+      if (curClear) curClear.classList.remove("hidden");
+      state.selectedLocationCandidate = null;
+      await executeAnalysis();
+    };
 
     if (analyzeBtn) {
       analyzeBtn.addEventListener("click", executeAnalysis);
@@ -2845,6 +2908,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
   }
+
 
   // Initialize Location Weather Analysis & Dynamic Hazard Updates
   setupLocationAnalysis();
