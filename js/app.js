@@ -53,8 +53,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     },
     analyticsCharts: {},
     gpsLocationData: null,
-    userLocationMarker: null
+    userLocationMarker: null,
+    evidenceByDistrict: {},
+    lastEvidence: null,
+    selectedLocationCandidate: null,
+    analyzedLocationMarker: null
   };
+
 
   // DOM Cache
   const views = {
@@ -1875,8 +1880,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     ALERTORA_DATA.eocDistricts.forEach(row => {
       const tr = document.createElement("tr");
       tr.className = "border-b border-slate-800 hover:bg-slate-800/40 transition";
+      const hasEvidence = row.evidence || (state.evidenceByDistrict && state.evidenceByDistrict[row.district]);
+      const districtEscaped = (row.district || "").replace(/'/g, "\\'");
+
       tr.innerHTML = `
-        <td class="p-3 font-bold font-mono text-cyan-400">${row.district}</td>
+        <td class="p-3 font-bold font-mono text-cyan-400">
+          <div class="flex items-center space-x-1.5">
+            <span>${row.district}</span>
+            ${hasEvidence ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40">ANALYZED</span>` : ''}
+          </div>
+        </td>
         <td class="p-3 text-gray-300 text-xs font-mono">${row.hazard}</td>
         <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${getRiskBadgeClass(row.risk)}">${row.risk}</span></td>
         <td class="p-3 text-amber-400 font-mono text-xs font-bold">${row.eta}</td>
@@ -1884,14 +1897,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         <td class="p-3 text-gray-300 text-xs">${row.populationAtRisk}</td>
         <td class="p-3 text-gray-400 text-xs">${row.infraAtRisk}</td>
         <td class="p-3">
-          <button onclick="window.alertoraAPI.triggerPublicWarning('${row.district}').then(r => alert(r.message))" class="bg-cyan-500/20 hover:bg-cyan-500 text-cyan-400 hover:text-black border border-cyan-500/40 text-[11px] font-bold px-2.5 py-1 rounded transition font-mono">
-            ${row.actionRequired}
-          </button>
+          <div class="flex items-center space-x-1.5">
+            <button onclick="window.alertoraAPI.triggerPublicWarning('${districtEscaped}').then(r => alert(r.message))" class="bg-cyan-500/20 hover:bg-cyan-500 text-cyan-400 hover:text-black border border-cyan-500/40 text-[11px] font-bold px-2.5 py-1 rounded transition font-mono whitespace-nowrap">
+              ${row.actionRequired}
+            </button>
+            ${hasEvidence ? `
+              <button onclick="window.showEvidenceModal('${districtEscaped}')" class="bg-indigo-500/20 hover:bg-indigo-500 text-indigo-300 hover:text-black border border-indigo-500/40 text-[11px] font-bold px-2 py-1 rounded transition font-mono whitespace-nowrap flex items-center space-x-1">
+                <span>🔍 Evidence</span>
+              </button>
+            ` : ''}
+          </div>
         </td>
       `;
       tbody.appendChild(tr);
     });
   }
+
 
 
 
@@ -2343,10 +2364,496 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  /* ==============================================================================
+     LOCATION WEATHER ANALYSIS & DYNAMIC HAZARD MATRIX LOGIC
+     ============================================================================== */
+  function showEvidenceModal(districtOrEvidence) {
+    let ev = null;
+    if (typeof districtOrEvidence === "object" && districtOrEvidence !== null) {
+      ev = districtOrEvidence;
+    } else if (typeof districtOrEvidence === "string") {
+      ev = state.evidenceByDistrict[districtOrEvidence] || state.lastEvidence;
+      if (!ev) {
+        // Try case-insensitive lookup
+        const key = Object.keys(state.evidenceByDistrict).find(
+          k => k.toLowerCase() === districtOrEvidence.toLowerCase()
+        );
+        if (key) ev = state.evidenceByDistrict[key];
+      }
+    }
+
+    if (!ev) {
+      ev = state.lastEvidence;
+    }
+
+    if (!ev) {
+      showToast("EVIDENCE NOTICE", "No detailed ML evidence provenance currently stored for this location.", "CYAN");
+      return;
+    }
+
+    const modal = document.getElementById("location-evidence-modal");
+    if (!modal) return;
+
+    // 1. Provenance Tag & Title
+    const badgeEl = document.getElementById("ev-result-badge");
+    if (badgeEl) {
+      badgeEl.textContent = ev.result_type || "MODEL_DERIVED";
+      if ((ev.result_type || "").includes("MODEL_DERIVED")) {
+        badgeEl.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40";
+      } else {
+        badgeEl.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-500/40";
+      }
+    }
+
+    const titleEl = document.getElementById("ev-modal-title");
+    if (titleEl) {
+      titleEl.textContent = `${ev.location.name}${ev.location.state ? ', ' + ev.location.state : ''} (${ev.location.country || 'India'})`;
+    }
+
+    // 1. Coordinates & Domain
+    const domainPill = document.getElementById("ev-domain-pill");
+    if (domainPill) {
+      if (ev.location.in_model_domain) {
+        domainPill.textContent = "✓ In NCMRWF IMDAA Training Domain";
+        domainPill.className = "text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40";
+      } else {
+        domainPill.textContent = "⚠ Out of Domain (Physical NWP Assessment)";
+        domainPill.className = "text-[10px] px-2 py-0.5 rounded font-bold bg-amber-950 text-amber-300 border border-amber-500/40";
+      }
+    }
+
+    const distEl = document.getElementById("ev-district");
+    if (distEl) distEl.textContent = ev.location.district || ev.location.name;
+    const stateEl = document.getElementById("ev-state");
+    if (stateEl) stateEl.textContent = ev.location.state || "N/A";
+    const latEl = document.getElementById("ev-lat");
+    if (latEl) latEl.textContent = `${parseFloat(ev.location.latitude).toFixed(4)}° N`;
+    const lonEl = document.getElementById("ev-lon");
+    if (lonEl) lonEl.textContent = `${parseFloat(ev.location.longitude).toFixed(4)}° E`;
+
+    // 2. Weather Data
+    const w = ev.weather_data || {};
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setTxt("ev-temp", `${w.temperature_c ?? '--'}°C (${w.temperature_k ?? '--'} K)`);
+    setTxt("ev-rh", `${w.relative_humidity ?? '--'}%`);
+    setTxt("ev-sp", `${w.surface_pressure_hpa ?? '--'} hPa (${w.surface_pressure_pa ?? '--'} Pa)`);
+    setTxt("ev-precip", `${w.precipitation_mm ?? '0.00'} mm/h`);
+    setTxt("ev-wind", `${w.wind_speed_ms ?? '--'} m/s`);
+    setTxt("ev-uv-wind", `u: ${w.wind_u_ms ?? '--'} | v: ${w.wind_v_ms ?? '--'} m/s`);
+    setTxt("ev-cwp", `${w.cloud_water_kg_m2 ?? '--'} kg/m²`);
+    setTxt("ev-cape", `${w.cape_j_kg ?? '0'} J/kg`);
+
+    // 3 & 4. Weather Source & Timestamps
+    setTxt("ev-weather-source", ev.weather_source || "Open-Meteo High-Resolution Multi-Model NWP");
+    setTxt("ev-obs-time", ev.observation_timestamp || new Date().toISOString());
+    setTxt("ev-fcst-time", ev.forecast_timestamp || "+60 min horizon");
+
+    // 5 & 6. ML Model Inference
+    const pred = ev.model_prediction || {};
+    setTxt("ev-model-name", pred.model_name || "XGBoost Classifier v1");
+    setTxt("ev-prob-raw", `${((pred.raw_probability || 0) * 100).toFixed(2)}%`);
+    setTxt("ev-operating-thresh", `${((pred.operating_threshold || 0.25) * 100).toFixed(1)}%`);
+    const binaryEl = document.getElementById("ev-binary-class");
+    if (binaryEl) {
+      if (pred.predicted_high_rain_event) {
+        binaryEl.textContent = "POSITIVE (Rain Watch Triggered)";
+        binaryEl.className = "text-red-400 font-bold";
+      } else {
+        binaryEl.textContent = "NEGATIVE (Sub-Threshold Routine)";
+        binaryEl.className = "text-emerald-400 font-bold";
+      }
+    }
+
+    // 7 & 8. Classification & Validity
+    setTxt("ev-class-method", ev.risk_classification_method || "Hazard Fusion Score & IMDAA Percentile Thresholds");
+    setTxt("ev-validity", ev.forecast_validity || "0–1 Hour Nowcasting Horizon");
+
+    // 9. Data Limitations
+    setTxt("ev-limitations", ev.data_limitations || "No geographic limitation constraints detected.");
+
+    // 10. Top Feature Contributors
+    const topFeatEl = document.getElementById("ev-top-features");
+    if (topFeatEl) {
+      topFeatEl.innerHTML = "";
+      const contributors = ev.top_contributors || [];
+      contributors.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "flex items-center justify-between p-1.5 rounded bg-slate-950/40 border border-slate-800/80 text-[11px]";
+        div.innerHTML = `
+          <span class="text-gray-300"><b>${item.factor}:</b> <span class="text-cyan-300">${item.value}</span></span>
+          <span class="text-[10px] text-cyan-400 font-mono">${item.importance}</span>
+        `;
+        topFeatEl.appendChild(div);
+      });
+    }
+
+    modal.classList.remove("hidden");
+  }
+
+  window.showEvidenceModal = showEvidenceModal;
+
+  function setupLocationAnalysis() {
+    const input = document.getElementById("location-search-input");
+    const clearBtn = document.getElementById("location-search-clear");
+    const list = document.getElementById("location-autocomplete-list");
+    const analyzeBtn = document.getElementById("btn-analyze-location");
+    const spinner = document.getElementById("analyze-spinner");
+    const btnText = document.getElementById("analyze-btn-text");
+    const domainBadge = document.getElementById("location-domain-badge");
+    const resultCard = document.getElementById("analysis-result-card");
+    const inspectBtn = document.getElementById("btn-inspect-evidence");
+    const quickChips = document.querySelectorAll(".quick-loc-chip");
+
+    const modal = document.getElementById("location-evidence-modal");
+    const closeModal1 = document.getElementById("btn-close-evidence-modal");
+    const closeModal2 = document.getElementById("btn-close-evidence-modal-2");
+
+    if (closeModal1) closeModal1.addEventListener("click", () => modal && modal.classList.add("hidden"));
+    if (closeModal2) closeModal2.addEventListener("click", () => modal && modal.classList.add("hidden"));
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.classList.add("hidden");
+      });
+    }
+
+    if (inspectBtn) {
+      inspectBtn.addEventListener("click", () => {
+        if (state.lastEvidence) {
+          showEvidenceModal(state.lastEvidence);
+        } else {
+          showToast("NOTICE", "Please analyze a location first.", "CYAN");
+        }
+      });
+    }
+
+    let debounceTimer = null;
+
+    function renderDomainBadge(inDomain) {
+      if (!domainBadge) return;
+      domainBadge.classList.remove("hidden");
+      if (inDomain) {
+        domainBadge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40";
+        domainBadge.innerHTML = `<span>✓</span><span>NCMRWF IMDAA Validated (Model Inference)</span>`;
+      } else {
+        domainBadge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded text-[11px] font-bold bg-amber-950 text-amber-300 border border-amber-500/40";
+        domainBadge.innerHTML = `<span>⚠</span><span>Out-of-Domain (Live NWP Assessment with Geographic Note)</span>`;
+      }
+    }
+
+    function selectCandidate(item) {
+      state.selectedLocationCandidate = item;
+      if (input) {
+        input.value = item.formatted_label || `${item.name}, ${item.state}`;
+      }
+      if (clearBtn) clearBtn.classList.remove("hidden");
+      if (list) list.classList.add("hidden");
+      renderDomainBadge(item.in_model_domain);
+    }
+
+    async function handleSearch(query) {
+      const q = query.trim();
+      if (!q) {
+        if (list) list.classList.add("hidden");
+        return;
+      }
+
+      if (!window.alertoraAPI) return;
+
+      try {
+        const results = await window.alertoraAPI.searchLocations(q);
+        if (!list) return;
+
+        if (!results || results.length === 0) {
+          list.innerHTML = `
+            <div class="p-3 text-xs text-gray-400 text-center">
+              No matching locations found. Try entering lat, lon (e.g. 26.76, 83.37).
+            </div>
+          `;
+          list.classList.remove("hidden");
+          return;
+        }
+
+        list.innerHTML = "";
+        results.forEach(item => {
+          const div = document.createElement("div");
+          div.className = "p-2.5 hover:bg-slate-800/90 cursor-pointer transition flex items-center justify-between";
+          
+          const domainBadgeHtml = item.in_model_domain
+            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40 whitespace-nowrap">✓ IMDAA Validated</span>`
+            : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-500/40 whitespace-nowrap">NWP Analysis</span>`;
+
+          div.innerHTML = `
+            <div class="space-y-0.5 pr-2">
+              <div class="font-bold text-white text-xs">${item.name}</div>
+              <div class="text-[11px] text-gray-400">${item.state ? item.state + ', ' : ''}${item.country || 'India'} (${item.latitude.toFixed(4)}°, ${item.longitude.toFixed(4)}°)</div>
+            </div>
+            <div>${domainBadgeHtml}</div>
+          `;
+
+          div.addEventListener("click", () => {
+            selectCandidate(item);
+          });
+
+          list.appendChild(div);
+        });
+
+        list.classList.remove("hidden");
+      } catch (err) {
+        console.warn("[Location Search] Error fetching suggestions:", err);
+      }
+    }
+
+    if (input) {
+      input.addEventListener("input", (e) => {
+        const val = e.target.value;
+        if (clearBtn) {
+          if (val) clearBtn.classList.remove("hidden");
+          else clearBtn.classList.add("hidden");
+        }
+
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          handleSearch(val);
+        }, 300);
+      });
+
+      input.addEventListener("focus", () => {
+        if (input.value.trim() && list && list.children.length > 0) {
+          list.classList.remove("hidden");
+        }
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        if (input) input.value = "";
+        clearBtn.classList.add("hidden");
+        if (list) list.classList.add("hidden");
+        state.selectedLocationCandidate = null;
+        if (domainBadge) domainBadge.classList.add("hidden");
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      if (input && list && !input.contains(e.target) && !list.contains(e.target)) {
+        list.classList.add("hidden");
+      }
+    });
+
+    quickChips.forEach(chip => {
+      chip.addEventListener("click", async () => {
+        const query = chip.dataset.query;
+        if (input) input.value = query;
+        if (clearBtn) clearBtn.classList.remove("hidden");
+        await handleSearch(query);
+        // Automatically select the first candidate
+        if (list && list.children.length > 0) {
+          const firstItem = list.children[0];
+          firstItem.click();
+        }
+      });
+    });
+
+    async function executeAnalysis() {
+      let candidate = state.selectedLocationCandidate;
+
+      if (!candidate && input) {
+        const text = input.value.trim();
+        if (!text) {
+          showToast("INPUT REQUIRED", "Please enter a location name or coordinates.", "CYAN");
+          return;
+        }
+
+        // Check if coordinate regex
+        const coordParts = text.split(",");
+        if (coordParts.length === 2 && !isNaN(parseFloat(coordParts[0])) && !isNaN(parseFloat(coordParts[1]))) {
+          const lat = parseFloat(coordParts[0].trim());
+          const lon = parseFloat(coordParts[1].trim());
+          candidate = {
+            latitude: lat,
+            longitude: lon,
+            name: `Coordinate (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`,
+            district: `Coord_${lat.toFixed(2)}_${lon.toFixed(2)}`,
+            state: "",
+            country: "India",
+            in_model_domain: isInsideImdaaDomain(lat, lon)
+          };
+        } else {
+          // Look up candidate
+          const results = await window.alertoraAPI.searchLocations(text);
+          if (results && results.length > 0) {
+            candidate = results[0];
+            selectCandidate(candidate);
+          } else {
+            showToast("LOCATION NOT FOUND", `Could not resolve "${text}". Try another place name or coordinates.`, "RED");
+            return;
+          }
+        }
+      }
+
+      if (!candidate) return;
+
+      // Set loading state
+      if (analyzeBtn) analyzeBtn.disabled = true;
+      if (spinner) spinner.classList.remove("hidden");
+      if (btnText) btnText.textContent = "Analyzing Weather & ML Model...";
+
+      try {
+        const payload = {
+          latitude: candidate.latitude,
+          longitude: candidate.longitude,
+          name: candidate.name,
+          district: candidate.district || candidate.name,
+          state: candidate.state || "",
+          country: candidate.country || "India"
+        };
+
+        const response = await window.alertoraAPI.analyzeLocation(payload);
+
+        if (response && response.status === "SUCCESS") {
+          const tableRow = response.table_row;
+          const evidence = response.evidence;
+
+          // Store in state
+          state.lastEvidence = evidence;
+          state.evidenceByDistrict[tableRow.district] = evidence;
+
+          // Dynamically populate or update District Hazard Risk Matrix (#eoc-district-table-body)
+          if (typeof ALERTORA_DATA !== "undefined" && ALERTORA_DATA.eocDistricts) {
+            const districtLower = tableRow.district.toLowerCase();
+            const existingIdx = ALERTORA_DATA.eocDistricts.findIndex(
+              d => d.district.toLowerCase() === districtLower
+            );
+
+            if (existingIdx !== -1) {
+              ALERTORA_DATA.eocDistricts[existingIdx] = {
+                ...ALERTORA_DATA.eocDistricts[existingIdx],
+                ...tableRow,
+                evidence: evidence
+              };
+            } else {
+              ALERTORA_DATA.eocDistricts.unshift({
+                ...tableRow,
+                evidence: evidence
+              });
+            }
+
+            // Immediately re-render EOC table
+            renderEOCView();
+          }
+
+          // Populate Dashboard Result Banner
+          if (resultCard) {
+            resultCard.classList.remove("hidden");
+            const resTitle = document.getElementById("analysis-loc-title");
+            if (resTitle) resTitle.textContent = `${evidence.location.name}${evidence.location.state ? ', ' + evidence.location.state : ''}`;
+
+            const resTag = document.getElementById("analysis-provenance-tag");
+            if (resTag) {
+              resTag.textContent = evidence.result_type;
+              if (evidence.result_type.includes("MODEL_DERIVED")) {
+                resTag.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40";
+              } else {
+                resTag.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-500/40";
+              }
+            }
+
+            const resHazard = document.getElementById("analysis-hazard-name");
+            if (resHazard) resHazard.textContent = tableRow.hazard;
+
+            const resRisk = document.getElementById("analysis-risk-badge");
+            if (resRisk) {
+              resRisk.textContent = tableRow.risk;
+              resRisk.className = `px-2 py-0.5 rounded text-[10px] font-bold ${getRiskBadgeClass(tableRow.risk)}`;
+            }
+
+            const resProb = document.getElementById("analysis-prob-val");
+            if (resProb) {
+              resProb.textContent = `${((evidence.model_prediction.raw_probability || 0) * 100).toFixed(1)}% (Thresh: 25%)`;
+            }
+
+            const resEta = document.getElementById("analysis-eta-val");
+            if (resEta) resEta.textContent = tableRow.eta;
+          }
+
+          // Drop/Update Pin on GIS Map
+          if (state.map && typeof L !== "undefined") {
+            const lat = candidate.latitude;
+            const lon = candidate.longitude;
+            state.map.setView([lat, lon], 10, { animate: true });
+
+            if (state.analyzedLocationMarker) {
+              state.analyzedLocationMarker.setLatLng([lat, lon]);
+            } else {
+              const markerIcon = L.divIcon({
+                className: 'custom-analyzed-pin',
+                html: `<div class="relative flex items-center justify-center">
+                        <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-indigo-400 opacity-75"></span>
+                        <div style="background-color:#6366f1; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 15px #6366f1" class="relative"></div>
+                       </div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+              });
+              state.analyzedLocationMarker = L.marker([lat, lon], { icon: markerIcon }).addTo(state.map);
+            }
+
+            const escapedDist = tableRow.district.replace(/'/g, "\\'");
+            state.analyzedLocationMarker.bindPopup(`
+              <div class="p-2 min-w-[220px] font-mono">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-1 mb-2">
+                  <span class="font-bold text-sm text-cyan-400">${tableRow.district}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${getRiskBadgeClass(tableRow.risk)}">${tableRow.risk}</span>
+                </div>
+                <div class="text-xs space-y-1 text-gray-300">
+                  <div><b>Hazard:</b> ${tableRow.hazard}</div>
+                  <div><b>ETA:</b> <span class="text-amber-400">${tableRow.eta}</span></div>
+                  <div><b>Confidence:</b> ${tableRow.confidence}</div>
+                  <div><b>Result:</b> <span class="text-cyan-300 text-[10px]">${evidence.result_type}</span></div>
+                </div>
+                <button onclick="window.showEvidenceModal('${escapedDist}')" class="mt-3 w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-1 px-2 rounded transition">
+                  🔍 Inspect ML Evidence
+                </button>
+              </div>
+            `).openPopup();
+          }
+
+          showToast(
+            "ANALYSIS COMPLETE",
+            `Successfully analyzed ${tableRow.district}: ${tableRow.risk} Risk (${tableRow.hazard})`,
+            tableRow.risk === "EXTREME" || tableRow.risk === "HIGH" ? "RED" : "CYAN"
+          );
+        }
+      } catch (err) {
+        showToast("ANALYSIS ERROR", err.message || "Failed to analyze weather data.", "RED");
+      } finally {
+        if (analyzeBtn) analyzeBtn.disabled = false;
+        if (spinner) spinner.classList.add("hidden");
+        if (btnText) btnText.textContent = "⚡ Analyze Location";
+      }
+    }
+
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener("click", executeAnalysis);
+    }
+
+    if (input) {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          executeAnalysis();
+        }
+      });
+    }
+  }
+
+  // Initialize Location Weather Analysis & Dynamic Hazard Updates
+  setupLocationAnalysis();
+
   // Initialize Real-Time SSE
   setupRealTimeSSE();
 
   // Set default view
   switchView("dashboard");
 });
+
 

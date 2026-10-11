@@ -13,9 +13,11 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from backend.ai_engine import ai_engine
+from backend.location_service import location_analyzer
 from backend.ml_handoff import DEVELOPMENT_FIXTURE
 from backend.models import AlertItem, EOCDistrictRow, LocationProfile
 from backend.notifications.router import router as notification_router
@@ -248,6 +250,46 @@ async def trigger_warning(district: str):
         "targeted_devices": dispatch_res.targeted_devices,
         "dispatched_count": dispatch_res.dispatched_count,
     }
+
+
+class LocationAnalysisRequest(BaseModel):
+    latitude: float
+    longitude: float
+    name: Optional[str] = "Target Location"
+    district: Optional[str] = ""
+    state: Optional[str] = ""
+    country: Optional[str] = "India"
+
+
+@app.get("/api/location/search")
+def search_locations(q: str):
+    """
+    Search and geocode locations for weather analysis.
+    Supports place names (e.g. Gorakhpur, Chennai) and lat/lon coordinate pairs.
+    """
+    if not q or not q.strip():
+        return []
+    return location_analyzer.search_locations(q.strip())
+
+
+@app.post("/api/location/analyze")
+def analyze_location(req: LocationAnalysisRequest):
+    """
+    Analyzes live weather for the specified location using the existing trained ML model.
+    Returns table row data and detailed evidence provenance.
+    """
+    try:
+        return location_analyzer.analyze_location(
+            latitude=req.latitude,
+            longitude=req.longitude,
+            name=req.name or "Target Location",
+            district=req.district or "",
+            state=req.state or "",
+            country=req.country or "India",
+        )
+    except Exception as exc:
+        logger.error(f"[LocationAPI] Analysis failed for ({req.latitude}, {req.longitude}): {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 if __name__ == "__main__":

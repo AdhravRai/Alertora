@@ -517,7 +517,41 @@ class AlertoraAPIService {
       return null;
     }
   }
+
+  // Search and geocode locations for weather analysis
+  async searchLocations(query) {
+    try {
+      const response = await fetch(`${this.baseURL}/location/search?q=${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return await response.json();
+    } catch (err) {
+      console.warn("[ALERTORA API] Location search failed:", err);
+      return [];
+    }
+  }
+
+  // Analyze location weather using existing trained ML model
+  async analyzeLocation(payload) {
+    try {
+      const response = await fetch(`${this.baseURL}/location/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+      }
+      return await response.json();
+    } catch (err) {
+      console.error("[ALERTORA API] Location analysis failed:", err);
+      throw err;
+    }
+  }
 }
+
 
 // Global API instance
 window.alertoraAPI = new AlertoraAPIService();
