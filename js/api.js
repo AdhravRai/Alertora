@@ -5,12 +5,22 @@
 
 class AlertoraAPIService {
   constructor() {
-    // FastAPI backend is active for development integration
+    // FastAPI backend is active for development & production integration
     this.useLiveBackend = true;
-    const host = (typeof window !== "undefined" && window.location && window.location.hostname && window.location.hostname !== "")
-      ? window.location.hostname
-      : "localhost";
-    this.baseURL = `http://${host}:8000/api`;
+    if (typeof window !== "undefined" && window.location) {
+      const port = window.location.port;
+      const protocol = window.location.protocol;
+      // When running on local static dev servers (e.g. 8080 or 3000), backend is on port 8000
+      if (protocol === "file:" || port === "8080" || port === "3000") {
+        const host = window.location.hostname || "localhost";
+        this.baseURL = `http://${host}:8000/api`;
+      } else {
+        // Production (Render / Cloud) or unified FastAPI server: use same-origin /api
+        this.baseURL = `${window.location.origin}/api`;
+      }
+    } else {
+      this.baseURL = "http://localhost:8000/api";
+    }
   }
 
 

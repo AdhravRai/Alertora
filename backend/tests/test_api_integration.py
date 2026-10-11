@@ -127,3 +127,23 @@ def test_etag_and_caching_headers():
     # Send If-None-Match with matching ETag
     conditional_response = client.get("/", headers={"If-None-Match": etag})
     assert conditional_response.status_code == 304
+
+
+def test_frontend_html_and_static_serving():
+    """Verify frontend HTML dashboard and static assets are served properly for browsers."""
+    # 1. Browser navigation to root /
+    browser_res = client.get("/", headers={"Accept": "text/html,application/xhtml+xml"})
+    assert browser_res.status_code == 200
+    assert "<!DOCTYPE html>" in browser_res.text
+    assert "ALERTORA AI" in browser_res.text
+
+    # 2. Direct /index.html navigation
+    index_res = client.get("/index.html")
+    assert index_res.status_code == 200
+    assert "<!DOCTYPE html>" in index_res.text
+
+    # 3. Static asset serving
+    js_res = client.get("/js/api.js")
+    assert js_res.status_code == 200
+    assert "AlertoraAPIService" in js_res.text
+

@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -28,8 +30,9 @@ from backend.real_time.sse_router import router as sse_router
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("alertora.main")
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
 RISK_ZONES_FILE = (
-    Path(__file__).resolve().parent.parent
+    ROOT_DIR
     / "data"
     / "processed"
     / "risk_zones_july29_0200.json"
@@ -76,6 +79,13 @@ class CacheAndETagMiddleware(BaseHTTPMiddleware):
             response.headers["Cache-Control"] = "no-cache, no-transform"
             return response
 
+        # Pass static assets directly without buffering stream iterators
+        if path.startswith(("/js", "/css", "/data", "/person-b")):
+            response = await call_next(request)
+            if not response.headers.get("Cache-Control"):
+                response.headers["Cache-Control"] = "public, max-age=3600"
+            return response
+
         response: Response = await call_next(request)
 
         # Apply Caching & ETag on successful GET requests
@@ -108,13 +118,30 @@ app.add_middleware(CacheAndETagMiddleware)
 app.include_router(sse_router)
 app.include_router(notification_router)
 
+# Mount Static Directories for Frontend Dashboard
+if (ROOT_DIR / "js").exists():
+    app.mount("/js", StaticFiles(directory=str(ROOT_DIR / "js")), name="js")
+if (ROOT_DIR / "css").exists():
+    app.mount("/css", StaticFiles(directory=str(ROOT_DIR / "css")), name="css")
+if (ROOT_DIR / "data").exists():
+    app.mount("/data", StaticFiles(directory=str(ROOT_DIR / "data")), name="data")
+if (ROOT_DIR / "person-b").exists():
+    app.mount("/person-b", StaticFiles(directory=str(ROOT_DIR / "person-b")), name="person-b")
+
 
 # ---------------------------------------------------------------------------
-# Base REST Endpoints
+# Base REST Endpoints & Web Frontend
 # ---------------------------------------------------------------------------
 
 @app.get("/")
-def read_root():
+def read_root(request: Request):
+    """
+    Returns index.html when accessed via web browser,
+    or JSON system health metadata for API test clients.
+    """
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept and (ROOT_DIR / "index.html").exists():
+        return FileResponse(ROOT_DIR / "index.html")
     return {
         "app": "ALERTORA AI",
         "tagline": "Predict Early. Prepare Smart. Save Lives.",
@@ -129,6 +156,14 @@ def read_root():
             "ML Explainability & 6-Hour Nowcasting",
         ],
     }
+
+
+@app.get("/index.html")
+def read_index():
+    """Direct web entrypoint for index.html."""
+    if (ROOT_DIR / "index.html").exists():
+        return FileResponse(ROOT_DIR / "index.html")
+    raise HTTPException(status_code=404, detail="index.html not found")
 
 
 @app.get("/api/system-status")
@@ -293,5 +328,7 @@ def analyze_location(req: LocationAnalysisRequest):
 
 
 if __name__ == "__main__":
+    import os
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=port)
