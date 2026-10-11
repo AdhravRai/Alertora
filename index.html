@@ -414,19 +414,19 @@
         <!-- Storm Arrival Countdown Card + AI Prediction Engine Summary -->
         <div class="space-y-6">
           <!-- Countdown Card -->
-          <div class="glass-panel p-5 rounded-xl border-red-500/50 bg-red-950/20 box-glow-red relative overflow-hidden">
-            <div class="flex items-center justify-between text-xs font-mono text-red-400 mb-2">
-              <span>⚠️ NEXT SEVERE EVENT COUNTDOWN</span>
-              <span class="px-2 py-0.5 rounded bg-red-900/60 font-bold">EXTREME RISK</span>
+          <div id="countdown-card-container" class="glass-panel p-5 rounded-xl border-orange-500/50 bg-orange-950/20 box-glow-orange relative overflow-hidden transition-all duration-300">
+            <div class="flex items-center justify-between text-xs font-mono text-orange-400 mb-2">
+              <span id="countdown-header-title">⚠️ SEVERE EVENT COUNTDOWN</span>
+              <span id="countdown-risk-badge" class="px-2 py-0.5 rounded bg-orange-900/60 text-orange-200 border border-orange-500/40 font-bold">HIGH RISK</span>
             </div>
 
-            <h3 id="countdown-hazard-type" class="text-xl font-black text-white font-mono mb-1">Severe Convective Thunderstorm & Cloudburst</h3>
-            <p id="countdown-location" class="text-xs text-gray-300 font-mono mb-4">Tiruvallur & North Chennai Coastal Zone</p>
+            <h3 id="countdown-hazard-type" class="text-xl font-black text-white font-mono mb-1">Thunderstorm + Lightning</h3>
+            <p id="countdown-location" class="text-xs text-gray-300 font-mono mb-4">Chennai Metropolis</p>
 
             <!-- Ticking Digital Countdown -->
-            <div class="bg-black/60 p-4 rounded-xl border border-red-500/40 text-center my-4 font-mono">
-              <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">ESTIMATED IMPACT IN</div>
-              <div class="flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-red-500 glow-red">
+            <div id="countdown-timer-box" class="bg-black/60 p-4 rounded-xl border border-orange-500/40 text-center my-4 font-mono transition-all">
+              <div id="countdown-timer-label" class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">ESTIMATED IMPACT IN</div>
+              <div id="countdown-timer-digits" class="flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-orange-400 glow-orange">
                 <span id="timer-hours">01</span><span class="text-gray-600">:</span>
                 <span id="timer-minutes">24</span><span class="text-gray-600">:</span>
                 <span id="timer-seconds">36</span>
@@ -434,15 +434,15 @@
             </div>
 
             <div class="flex items-center justify-between text-xs text-gray-400 font-mono mb-4">
-              <span>Model Confidence: <b class="text-cyan-400">94%</b></span>
-              <span>Lead Time: <b class="text-white">48 min</b></span>
+              <span>Model Confidence: <b id="countdown-confidence" class="text-cyan-400">91%</b></span>
+              <span>Lead Time: <b id="countdown-lead-time" class="text-white">01h 24m</b></span>
             </div>
 
             <div class="grid grid-cols-2 gap-2 font-mono">
               <button onclick="window.switchAppView('map')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 text-xs font-bold rounded-lg transition">
                 View Risk Zone
               </button>
-              <button onclick="window.switchAppView('precautions')" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-red-600/30">
+              <button id="countdown-advisor-btn" onclick="window.switchAppView('precautions')" class="px-3 py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-orange-600/30">
                 Safety Advisor →
               </button>
             </div>

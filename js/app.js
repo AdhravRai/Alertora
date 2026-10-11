@@ -442,18 +442,157 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
+  // Parse ETA string to seconds
+  function parseEtaToSeconds(etaStr) {
+    if (!etaStr) return 5040;
+    const hm = etaStr.match(/(\d+)h\s*(\d+)m/i);
+    if (hm) return parseInt(hm[1], 10) * 3600 + parseInt(hm[2], 10) * 60;
+    const m = etaStr.match(/(\d+)\s*m/i);
+    if (m) return parseInt(m[1], 10) * 60;
+    const h = etaStr.match(/(\d+)\s*h/i);
+    if (h) return parseInt(h[1], 10) * 3600;
+    return 5040;
+  }
+
+  // Helper to get active location object
+  function getCurrentLocation() {
+    if (state.selectedLocationId === "gps-current" && state.gpsLocationData) {
+      return state.gpsLocationData;
+    }
+    return ALERTORA_DATA.locations.find(l => l.id === state.selectedLocationId) || ALERTORA_DATA.locations[0];
+  }
+
+  // Update Countdown Card Theme & Content proportionally by Risk Level
+  function updateCountdownCardTheme(risk, loc) {
+    const container = document.getElementById("countdown-card-container");
+    const headerTitle = document.getElementById("countdown-header-title");
+    const riskBadge = document.getElementById("countdown-risk-badge");
+    const timerBox = document.getElementById("countdown-timer-box");
+    const timerLabel = document.getElementById("countdown-timer-label");
+    const timerDigits = document.getElementById("countdown-timer-digits");
+    const advisorBtn = document.getElementById("countdown-advisor-btn");
+    const leadTime = document.getElementById("countdown-lead-time");
+    const confidence = document.getElementById("countdown-confidence");
+
+    if (leadTime && loc && loc.nextHazardETA) {
+      leadTime.textContent = loc.nextHazardETA;
+    }
+
+    const r = (risk || "LOW").toUpperCase();
+
+    if (confidence) {
+      const conf = r === "EXTREME" ? "94%" : (r === "HIGH" ? "91%" : (r === "MODERATE" ? "84%" : "78%"));
+      confidence.textContent = conf;
+    }
+
+    if (r === "EXTREME") {
+      if (container) {
+        container.className = "glass-panel p-5 rounded-xl border-red-500/50 bg-red-950/20 box-glow-red relative overflow-hidden transition-all duration-300";
+      }
+      if (headerTitle) {
+        headerTitle.className = "text-red-400 font-bold";
+        headerTitle.textContent = "🚨 CRITICAL IMPACT COUNTDOWN";
+      }
+      if (riskBadge) {
+        riskBadge.className = "px-2 py-0.5 rounded bg-red-900/60 text-red-200 border border-red-500/50 font-bold font-mono animate-pulse-red";
+        riskBadge.textContent = "EXTREME RISK";
+      }
+      if (timerBox) timerBox.className = "bg-black/60 p-4 rounded-xl border border-red-500/40 text-center my-4 font-mono transition-all";
+      if (timerLabel) timerLabel.textContent = "CRITICAL IMPACT IN";
+      if (timerDigits) timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-red-500 glow-red";
+      if (advisorBtn) advisorBtn.className = "px-3 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-red-600/30";
+    } else if (r === "HIGH") {
+      if (container) {
+        container.className = "glass-panel p-5 rounded-xl border-orange-500/50 bg-orange-950/20 box-glow-orange relative overflow-hidden transition-all duration-300";
+      }
+      if (headerTitle) {
+        headerTitle.className = "text-orange-400 font-bold";
+        headerTitle.textContent = "⚠️ SEVERE EVENT COUNTDOWN";
+      }
+      if (riskBadge) {
+        riskBadge.className = "px-2 py-0.5 rounded bg-orange-900/60 text-orange-200 border border-orange-500/50 font-bold font-mono";
+        riskBadge.textContent = "HIGH RISK";
+      }
+      if (timerBox) timerBox.className = "bg-black/60 p-4 rounded-xl border border-orange-500/40 text-center my-4 font-mono transition-all";
+      if (timerLabel) timerLabel.textContent = "ESTIMATED IMPACT IN";
+      if (timerDigits) timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-orange-400 glow-orange";
+      if (advisorBtn) advisorBtn.className = "px-3 py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-orange-600/30";
+    } else if (r === "MODERATE") {
+      if (container) {
+        container.className = "glass-panel p-5 rounded-xl border-amber-500/50 bg-amber-950/20 box-glow-amber relative overflow-hidden transition-all duration-300";
+      }
+      if (headerTitle) {
+        headerTitle.className = "text-amber-400 font-bold";
+        headerTitle.textContent = "⚠️ WEATHER WATCH COUNTDOWN";
+      }
+      if (riskBadge) {
+        riskBadge.className = "px-2 py-0.5 rounded bg-amber-900/60 text-amber-200 border border-amber-500/50 font-bold font-mono";
+        riskBadge.textContent = "MODERATE RISK";
+      }
+      if (timerBox) timerBox.className = "bg-black/60 p-4 rounded-xl border border-amber-500/40 text-center my-4 font-mono transition-all";
+      if (timerLabel) timerLabel.textContent = "EXPECTED PASSAGE IN";
+      if (timerDigits) timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-amber-400 glow-amber";
+      if (advisorBtn) advisorBtn.className = "px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-amber-600/30";
+    } else {
+      // LOW
+      if (container) {
+        container.className = "glass-panel p-5 rounded-xl border-emerald-500/50 bg-emerald-950/20 box-glow-emerald relative overflow-hidden transition-all duration-300";
+      }
+      if (headerTitle) {
+        headerTitle.className = "text-emerald-400 font-bold";
+        headerTitle.textContent = "✓ ROUTINE WEATHER MONITORING";
+      }
+      if (riskBadge) {
+        riskBadge.className = "px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-200 border border-emerald-500/50 font-bold font-mono";
+        riskBadge.textContent = "LOW RISK";
+      }
+      if (timerBox) timerBox.className = "bg-black/60 p-4 rounded-xl border border-emerald-500/40 text-center my-4 font-mono transition-all";
+      if (timerLabel) timerLabel.textContent = "ROUTINE RE-EVALUATION IN";
+      if (timerDigits) timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-emerald-400 glow-emerald";
+      if (advisorBtn) advisorBtn.className = "px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-emerald-600/30";
+    }
+  }
+
   // Generate Weather & Predictions for Detected Coordinates
   function generateGpsLocationObject(lat, lng, placeName = "Detected Location") {
     const latStr = lat.toFixed(4);
     const lngStr = lng.toFixed(4);
 
-    const seed = Math.abs(Math.sin(lat * 100 + lng * 50));
-    const thunderstormProb = Math.floor(65 + seed * 30);
-    const hailProb = Math.floor(20 + seed * 25);
-    const cloudburstProb = Math.floor(45 + seed * 35);
-    const lightningProb = Math.floor(70 + seed * 25);
+    // Approximate distance in degrees to nearest convective storm cell epicenters
+    const distTiruvallur = Math.sqrt(Math.pow(lat - 13.1439, 2) + Math.pow(lng - 79.905, 2));
+    const distCoimbatore = Math.sqrt(Math.pow(lat - 11.0168, 2) + Math.pow(lng - 76.9558, 2));
+    const minDist = Math.min(distTiruvallur, distCoimbatore);
 
-    const riskLevel = thunderstormProb > 85 ? "EXTREME" : (thunderstormProb > 70 ? "HIGH" : "MODERATE");
+    let thunderstormProb, hailProb, cloudburstProb, lightningProb, riskLevel, nextHazardETA, nextHazardType, rainfallRate;
+
+    if (minDist < 0.6) { // Close to storm core (< ~65 km)
+      thunderstormProb = Math.min(96, Math.floor(82 + Math.random() * 14));
+      hailProb = Math.floor(35 + Math.random() * 25);
+      cloudburstProb = Math.floor(65 + Math.random() * 25);
+      lightningProb = Math.floor(85 + Math.random() * 12);
+      riskLevel = thunderstormProb >= 85 ? "EXTREME" : "HIGH";
+      nextHazardETA = "00h 25m";
+      nextHazardType = "Severe Convective Cell & Cloudburst";
+      rainfallRate = Math.floor(60 + Math.random() * 35);
+    } else if (minDist < 1.6) { // Moderate proximity (~65 - 175 km)
+      thunderstormProb = Math.floor(48 + Math.random() * 25);
+      hailProb = Math.floor(15 + Math.random() * 18);
+      cloudburstProb = Math.floor(25 + Math.random() * 25);
+      lightningProb = Math.floor(45 + Math.random() * 25);
+      riskLevel = thunderstormProb >= 65 ? "HIGH" : "MODERATE";
+      nextHazardETA = "01h 45m";
+      nextHazardType = "Developing Thunderstorm Cell";
+      rainfallRate = Math.floor(20 + Math.random() * 25);
+    } else { // Far from convective activity (> 175 km)
+      thunderstormProb = Math.floor(12 + Math.random() * 20);
+      hailProb = Math.floor(2 + Math.random() * 8);
+      cloudburstProb = Math.floor(4 + Math.random() * 12);
+      lightningProb = Math.floor(10 + Math.random() * 18);
+      riskLevel = thunderstormProb > 25 ? "MODERATE" : "LOW";
+      nextHazardETA = "04h 15m";
+      nextHazardType = "Routine Convective Monitoring";
+      rainfallRate = Math.floor(2 + Math.random() * 8);
+    }
 
     return {
       id: "gps-current",
@@ -464,21 +603,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       lat: lat,
       lng: lng,
       currentRisk: riskLevel,
-      temp: Number((28.5 + seed * 5).toFixed(1)),
-      humidity: Math.floor(78 + seed * 18),
-      windSpeed: Math.floor(28 + seed * 22),
-      pressure: 1003.8,
-      rainfallRate: Math.floor(35 + seed * 45),
-      nextHazardETA: "00h 35m",
-      nextHazardType: "Convective Cell & Rain",
+      temp: Number((28.5 + (1 - Math.min(1, minDist / 2)) * 3).toFixed(1)),
+      humidity: Math.floor(65 + (1 - Math.min(1, minDist / 2)) * 28),
+      windSpeed: Math.floor(15 + (1 - Math.min(1, minDist / 2)) * 35),
+      pressure: 1004.5,
+      rainfallRate: rainfallRate,
+      nextHazardETA: nextHazardETA,
+      nextHazardType: nextHazardType,
       nowcast: [
-        { hour: "NOW", time: "NOW", thunderstorm: thunderstormProb, hail: hailProb, cloudburst: cloudburstProb, lightning: lightningProb, rainfall: Math.floor(35 + seed * 45), wind: Math.floor(28 + seed * 22) },
-        { hour: "+1 HR", time: "+1H", thunderstorm: Math.min(100, thunderstormProb + 8), hail: Math.min(100, hailProb + 12), cloudburst: Math.min(100, cloudburstProb + 10), lightning: Math.min(100, lightningProb + 6), rainfall: Math.floor(55 + seed * 45), wind: Math.floor(38 + seed * 22) },
-        { hour: "+2 HR", time: "+2H", thunderstorm: Math.max(20, thunderstormProb - 10), hail: Math.max(10, hailProb - 10), cloudburst: Math.max(15, cloudburstProb - 15), lightning: Math.max(20, lightningProb - 15), rainfall: 30, wind: 25 },
-        { hour: "+3 HR", time: "+3H", thunderstorm: Math.max(15, thunderstormProb - 30), hail: 10, cloudburst: 15, lightning: 30, rainfall: 15, wind: 20 },
-        { hour: "+4 HR", time: "+4H", thunderstorm: 30, hail: 5, cloudburst: 10, lightning: 20, rainfall: 10, wind: 15 },
-        { hour: "+5 HR", time: "+5H", thunderstorm: 20, hail: 2, cloudburst: 5, lightning: 15, rainfall: 5, wind: 12 },
-        { hour: "+6 HR", time: "+6H", thunderstorm: 12, hail: 0, cloudburst: 2, lightning: 8, rainfall: 2, wind: 10 }
+        { hour: "NOW", time: "NOW", thunderstorm: thunderstormProb, hail: hailProb, cloudburst: cloudburstProb, lightning: lightningProb, rainfall: rainfallRate, wind: Math.floor(20 + (thunderstormProb / 100) * 35) },
+        { hour: "+1 HR", time: "+1H", thunderstorm: Math.min(100, thunderstormProb + 6), hail: Math.min(100, hailProb + 8), cloudburst: Math.min(100, cloudburstProb + 10), lightning: Math.min(100, lightningProb + 5), rainfall: Math.floor(rainfallRate * 1.2), wind: Math.floor(25 + (thunderstormProb / 100) * 35) },
+        { hour: "+2 HR", time: "+2H", thunderstorm: Math.max(15, thunderstormProb - 5), hail: Math.max(5, hailProb - 5), cloudburst: Math.max(10, cloudburstProb - 10), lightning: Math.max(15, lightningProb - 10), rainfall: Math.floor(rainfallRate * 0.8), wind: 25 },
+        { hour: "+3 HR", time: "+3H", thunderstorm: Math.max(10, thunderstormProb - 20), hail: 6, cloudburst: 10, lightning: 20, rainfall: 15, wind: 20 },
+        { hour: "+4 HR", time: "+4H", thunderstorm: Math.max(8, thunderstormProb - 35), hail: 3, cloudburst: 6, lightning: 15, rainfall: 8, wind: 15 },
+        { hour: "+5 HR", time: "+5H", thunderstorm: 15, hail: 2, cloudburst: 4, lightning: 12, rainfall: 4, wind: 12 },
+        { hour: "+6 HR", time: "+6H", thunderstorm: 10, hail: 0, cloudburst: 2, lightning: 6, rainfall: 2, wind: 10 }
       ]
     };
   }
@@ -497,6 +636,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.getElementById("countdown-location").textContent = `⌖ ${gpsLoc.placeName} (${gpsLoc.lat.toFixed(4)}° N, ${gpsLoc.lng.toFixed(4)}° E)`;
     document.getElementById("countdown-hazard-type").textContent = gpsLoc.nextHazardType;
+
+    // Synchronize countdown banner theme and live seconds
+    updateCountdownCardTheme(gpsLoc.currentRisk, gpsLoc);
+    const etaSecs = parseEtaToSeconds(gpsLoc.nextHazardETA);
+    state.countdownSeconds = etaSecs;
+    const pad = (n) => String(n).padStart(2, '0');
+    const hrs = Math.floor(etaSecs / 3600);
+    const mins = Math.floor((etaSecs % 3600) / 60);
+    const secs = etaSecs % 60;
+    const th = document.getElementById("timer-hours");
+    const tm = document.getElementById("timer-minutes");
+    const ts = document.getElementById("timer-seconds");
+    if (th) th.textContent = pad(hrs);
+    if (tm) tm.textContent = pad(mins);
+    if (ts) ts.textContent = pad(secs);
+
+    const timerSimple = document.getElementById("timer-simple-display");
+    if (timerSimple) {
+      timerSimple.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    }
 
     // Show GPS status badge and coordinates display
     const statusBadge = document.getElementById("gps-status-badge");
@@ -600,10 +759,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("countdown-location").textContent = loc.name;
     document.getElementById("countdown-hazard-type").textContent = loc.nextHazardType;
 
+    // Dynamic theming for Countdown Card based on location risk
+    updateCountdownCardTheme(loc.currentRisk, loc);
+
+    // Sync countdown timer seconds to location hazard ETA
+    const etaSecs = parseEtaToSeconds(loc.nextHazardETA);
+    state.countdownSeconds = etaSecs;
+    const pad = (n) => String(n).padStart(2, '0');
+    const hrs = Math.floor(etaSecs / 3600);
+    const mins = Math.floor((etaSecs % 3600) / 60);
+    const secs = etaSecs % 60;
+    const th = document.getElementById("timer-hours");
+    const tm = document.getElementById("timer-minutes");
+    const ts = document.getElementById("timer-seconds");
+    if (th) th.textContent = pad(hrs);
+    if (tm) tm.textContent = pad(mins);
+    if (ts) ts.textContent = pad(secs);
+
+    const timerSimple = document.getElementById("timer-simple-display");
+    if (timerSimple) {
+      timerSimple.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    }
+
     // Render AI Nowcast Timeline
     renderNowcastTimeline(loc.nowcast);
 
-    // Render Hazards Summary Cards
+    // Render Hazards Summary Cards dynamically for selected location
     renderHazardCards(loc);
 
     // Render XAI Panel
@@ -618,14 +799,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Helper for Risk Badge Classes
+  // Helper for Risk Badge Classes (supports EXTREME/RED, HIGH/ORANGE, MODERATE/YELLOW, LOW/GREEN)
   function getRiskBadgeClass(risk) {
-    switch (risk) {
-      case "EXTREME": return "bg-red-950/60 text-red-400 border-red-500/50 animate-pulse-red";
-      case "HIGH": return "bg-orange-950/60 text-orange-400 border-orange-500/50";
-      case "MODERATE": return "bg-yellow-950/60 text-yellow-400 border-yellow-500/50";
-      default: return "bg-emerald-950/60 text-emerald-400 border-emerald-500/50";
-    }
+    const r = (risk || "").toUpperCase();
+    if (r === "EXTREME" || r === "RED") return "bg-red-950/60 text-red-400 border-red-500/50 animate-pulse-red";
+    if (r === "HIGH" || r === "ORANGE") return "bg-orange-950/60 text-orange-400 border-orange-500/50";
+    if (r === "MODERATE" || r === "YELLOW") return "bg-yellow-950/60 text-yellow-400 border-yellow-500/50";
+    return "bg-emerald-950/60 text-emerald-400 border-emerald-500/50";
   }
 
   // Render AI Nowcast Timeline (0-6 Hours)
@@ -660,6 +840,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderNowcastTimeline(nowcastData);
         if (state.map) renderRealSpatialForecast(state.map);
         if (state.fullscreenMap) renderRealSpatialForecast(state.fullscreenMap);
+        renderHazardCards(getCurrentLocation());
       });
       hourSelectorContainer.appendChild(btn);
     });
@@ -755,12 +936,80 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  // Render 4 Hazard Cards
+  // Render 4 Hazard Cards dynamically based on selected Location & Nowcast
   function renderHazardCards(loc) {
     const container = document.getElementById("severe-hazard-cards");
     if (!container) return;
 
-    const hazards = ALERTORA_DATA.hazardsSummary;
+    const locData = loc || getCurrentLocation();
+    const nIndex = (state.selectedHorizonIndex !== undefined && locData.nowcast && locData.nowcast[state.selectedHorizonIndex]) ? state.selectedHorizonIndex : 0;
+    const nc = (locData.nowcast && locData.nowcast[nIndex]) ? locData.nowcast[nIndex] : {
+      thunderstorm: 60, hail: 20, cloudburst: 40, lightning: 65, rainfall: 30, wind: 35
+    };
+
+    function getHazardLevel(prob, extremeThresh, highThresh, modThresh) {
+      if (prob >= extremeThresh) return { level: "EXTREME", color: "#ef4444" };
+      if (prob >= highThresh) return { level: "HIGH", color: "#f97316" };
+      if (prob >= modThresh) return { level: "MODERATE", color: "#f59e0b" };
+      return { level: "LOW", color: "#10b981" };
+    }
+
+    const tLevel = getHazardLevel(nc.thunderstorm, 80, 65, 35);
+    const hLevel = getHazardLevel(nc.hail, 40, 25, 12);
+    const cLevel = getHazardLevel(nc.cloudburst, 70, 50, 25);
+    const lLevel = getHazardLevel(nc.lightning, 80, 65, 35);
+
+    const hazards = [
+      {
+        id: "thunderstorm",
+        icon: "⛈",
+        title: "THUNDERSTORM",
+        probability: nc.thunderstorm,
+        riskLevel: tLevel.level,
+        color: tLevel.color,
+        eta: locData.nextHazardETA || "01h 24m",
+        description: nc.thunderstorm >= 75
+          ? "Convective cell intensifying over local corridor. High updraft detected."
+          : (nc.thunderstorm >= 35 ? "Scattered convective cloud formations developing with moderate shear." : "Isolated cloud activity; low convective instability.")
+      },
+      {
+        id: "hail",
+        icon: "🧊",
+        title: "HAIL PROBABILITY",
+        probability: nc.hail,
+        riskLevel: hLevel.level,
+        color: hLevel.color,
+        eta: "02h 40m",
+        description: nc.hail >= 35
+          ? "Freezing level with high VIL water content detected by Radar."
+          : (nc.hail >= 15 ? "Marginal freezing level instability; small hail pellets possible." : "Negligible hail risk; thermal profiles unconducive to ice formation.")
+      },
+      {
+        id: "cloudburst",
+        icon: "🌧",
+        title: "CLOUDBURST / EXTREME RAIN",
+        probability: nc.cloudburst,
+        riskLevel: cLevel.level,
+        color: cLevel.color,
+        eta: "00h 50m",
+        description: nc.cloudburst >= 65
+          ? `Localized mesoscale convective complex causing flash rainfall (${nc.rainfall || locData.rainfallRate || 65} mm/hr).`
+          : (nc.cloudburst >= 25 ? `Moderate localized rainfall expected (~${nc.rainfall || locData.rainfallRate || 20} mm/hr).` : `Routine showers; low localized accumulation (~${nc.rainfall || locData.rainfallRate || 4} mm/hr).`)
+      },
+      {
+        id: "lightning",
+        icon: "⚡",
+        title: "LIGHTNING STRIKE DENSITY",
+        probability: nc.lightning,
+        riskLevel: lLevel.level,
+        color: lLevel.color,
+        eta: "00h 25m",
+        description: nc.lightning >= 75
+          ? "Severe Cloud-to-Ground (CG) lightning pulse detected upstream."
+          : (nc.lightning >= 35 ? "Intermittent cloud-to-ground and intra-cloud discharges detected." : "Low electrical discharge activity across detection array.")
+      }
+    ];
+
     container.innerHTML = "";
 
     hazards.forEach(h => {
@@ -1118,7 +1367,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Markers for all Tamil Nadu locations
     ALERTORA_DATA.locations.forEach(loc => {
-      const markerColor = loc.currentRisk === "EXTREME" ? "#ef4444" : (loc.currentRisk === "HIGH" ? "#f97316" : "#f59e0b");
+      const markerColor = loc.currentRisk === "EXTREME" 
+        ? "#ef4444" 
+        : (loc.currentRisk === "HIGH" 
+            ? "#f97316" 
+            : (loc.currentRisk === "MODERATE" ? "#f59e0b" : "#10b981"));
       
       const customIcon = L.divIcon({
         className: 'custom-map-pin',
@@ -1354,7 +1607,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     container.innerHTML = "";
     ALERTORA_DATA.alertsFeed.forEach(alert => {
       const alertCard = document.createElement("div");
-      const borderClass = alert.severity === "RED" ? "border-red-500/60 bg-red-950/20" : (alert.severity === "ORANGE" ? "border-orange-500/50 bg-orange-950/20" : "border-yellow-500/40 bg-yellow-950/20");
+      const borderClass = alert.severity === "RED" 
+        ? "border-red-500/60 bg-red-950/20" 
+        : (alert.severity === "ORANGE" 
+            ? "border-orange-500/50 bg-orange-950/20" 
+            : (alert.severity === "YELLOW" 
+                ? "border-yellow-500/40 bg-yellow-950/20" 
+                : "border-emerald-500/40 bg-emerald-950/20"));
       
       alertCard.className = `glass-panel p-5 rounded-xl border-l-4 ${borderClass} mb-4`;
       alertCard.innerHTML = `
@@ -1469,20 +1728,49 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentMySafetyHazard = "THUNDERSTORM";
 
   function renderMySafetyView() {
-    const locId = state.selectedLocationId;
-    const loc = locId === "gps-current" && state.gpsLocationData
-      ? state.gpsLocationData
-      : (ALERTORA_DATA.locations.find(l => l.id === locId) || ALERTORA_DATA.locations[0]);
+    const loc = getCurrentLocation();
 
     const locNameEl = document.getElementById("mysafety-loc-name");
     if (locNameEl) locNameEl.textContent = loc.placeName || loc.name;
 
+    const banner = document.getElementById("mysafety-risk-banner");
     const riskText = document.getElementById("mysafety-risk-text");
-    if (riskText) {
-      riskText.textContent = `⚠️ ${loc.currentRisk || "HIGH"} THUNDERSTORM RISK`;
+    const timerDisplay = document.getElementById("timer-simple-display");
+    
+    const risk = (loc.currentRisk || "LOW").toUpperCase();
+    if (banner) {
+      if (risk === "EXTREME") {
+        banner.className = "w-full md:w-auto p-4 rounded-xl border border-red-500/50 bg-red-950/40 flex items-center justify-between gap-4 font-mono shadow-lg box-glow-red";
+        if (riskText) {
+          riskText.className = "font-black text-sm uppercase text-red-400";
+          riskText.textContent = "🚨 CRITICAL SEVERE WEATHER ALERT";
+        }
+        if (timerDisplay) timerDisplay.className = "text-xl font-black text-red-400 glow-red";
+      } else if (risk === "HIGH") {
+        banner.className = "w-full md:w-auto p-4 rounded-xl border border-orange-500/40 bg-orange-950/30 flex items-center justify-between gap-4 font-mono shadow-lg box-glow-orange";
+        if (riskText) {
+          riskText.className = "font-black text-sm uppercase text-orange-400";
+          riskText.textContent = "⚠️ HIGH THUNDERSTORM RISK";
+        }
+        if (timerDisplay) timerDisplay.className = "text-xl font-black text-orange-400 glow-orange";
+      } else if (risk === "MODERATE") {
+        banner.className = "w-full md:w-auto p-4 rounded-xl border border-amber-500/40 bg-amber-950/30 flex items-center justify-between gap-4 font-mono shadow-lg box-glow-amber";
+        if (riskText) {
+          riskText.className = "font-black text-sm uppercase text-amber-400";
+          riskText.textContent = "⚠️ MODERATE WEATHER WATCH";
+        }
+        if (timerDisplay) timerDisplay.className = "text-xl font-black text-amber-400 glow-amber";
+      } else {
+        banner.className = "w-full md:w-auto p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/30 flex items-center justify-between gap-4 font-mono shadow-lg box-glow-emerald";
+        if (riskText) {
+          riskText.className = "font-black text-sm uppercase text-emerald-400";
+          riskText.textContent = "✓ ROUTINE MONITORING — CONDITIONS STABLE";
+        }
+        if (timerDisplay) timerDisplay.className = "text-xl font-black text-emerald-400 glow-emerald";
+      }
     }
 
-    renderMySafetyProtocolBox(currentMySafetyHazard);
+    renderMySafetyProtocolBox(currentMySafetyHazard, risk);
   }
 
   function renderMySafetyProtocolBox(hazardKey) {
@@ -1763,7 +2051,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const item = document.createElement("div");
       const severityColor = alert.severity === "RED" 
         ? "border-red-500/50 bg-red-950/30 text-red-300" 
-        : (alert.severity === "ORANGE" ? "border-orange-500/50 bg-orange-950/30 text-orange-300" : "border-yellow-500/40 bg-yellow-950/30 text-yellow-300");
+        : (alert.severity === "ORANGE" 
+            ? "border-orange-500/50 bg-orange-950/30 text-orange-300" 
+            : (alert.severity === "YELLOW" 
+                ? "border-yellow-500/40 bg-yellow-950/30 text-yellow-300" 
+                : "border-emerald-500/40 bg-emerald-950/30 text-emerald-300"));
       
       item.className = `p-2.5 rounded-lg border ${severityColor} transition hover:bg-slate-800/80 cursor-pointer`;
       item.onclick = () => {
