@@ -31,6 +31,27 @@ def test_system_status_endpoint():
     assert "sse" in data
 
 
+def test_locations_endpoint_region_metadata():
+    """Verify GET /api/locations returns canonical region metadata with valid risk and coordinates."""
+    response = client.get("/api/locations")
+    assert response.status_code == 200
+    locations = response.json()
+    assert isinstance(locations, list)
+    assert len(locations) > 0
+
+    loc = locations[0]
+    # Verify canonical region metadata fields
+    assert "id" in loc and loc["id"] is not None
+    assert "name" in loc and loc["name"] is not None
+    assert "region" in loc or "region_id" in loc
+    assert "currentRisk" in loc and loc["currentRisk"] is not None
+    assert loc["currentRisk"] != "undefined"
+    assert "latitude" in loc or "lat" in loc
+    assert "longitude" in loc or "lng" in loc
+    assert isinstance(loc.get("lat") or loc.get("latitude"), (int, float))
+    assert isinstance(loc.get("lng") or loc.get("longitude"), (int, float))
+
+
 def test_prediction_endpoint():
     """Verify existing GET /api/prediction backward compatibility."""
     response = client.get("/api/prediction?location_id=chennai&lat=13.0827&lng=80.2707")
@@ -146,4 +167,29 @@ def test_frontend_html_and_static_serving():
     js_res = client.get("/js/api.js")
     assert js_res.status_code == 200
     assert "AlertoraAPIService" in js_res.text
+
+
+def test_service_worker_endpoint():
+    """Verify /sw.js is served with application/javascript and Cache-Control headers."""
+    sw_res = client.get("/sw.js")
+    assert sw_res.status_code == 200
+    assert "application/javascript" in sw_res.headers.get("content-type", "")
+    assert "alertora-offline" in sw_res.text
+
+
+def test_region_defensive_null_safety():
+    """Verify locations endpoint maintains stability even when fixture structures are partial."""
+    from backend.main import get_locations
+    locs = get_locations()
+    assert isinstance(locs, list)
+    assert len(locs) == 1
+    loc = locs[0]
+    # Check that region label is never undefined
+    assert loc["name"] != "undefined"
+    assert loc["id"] != "undefined"
+    assert loc["currentRisk"] != "undefined"
+    assert loc["district"] != "undefined"
+    assert loc["lat"] is not None
+    assert loc["lng"] is not None
+
 

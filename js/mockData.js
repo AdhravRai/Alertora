@@ -383,5 +383,93 @@ const ALERTORA_DATA = {
     { timestamp: "12:36:50", source: "INSAT-3DR", message: "Band 10 Channel: Cloud top temperature decreased by 4.2°K in 15 minutes." },
     { timestamp: "12:36:30", source: "AWS GRID", message: "Station #TN-409 (Gummidipundi) reports pressure drop of 2.8 hPa/hr." },
     { timestamp: "12:36:10", source: "AI MODEL", message: "Convective nowcasting weights calculated. Risk status escalated to EXTREME." }
+  ],
+
+  // Designated Emergency Relief Shelters Database (Verified Geographic Coordinates)
+  shelters: [
+    {
+      id: "shelter-st-thomas",
+      name: "St. Thomas Community Shelter #4",
+      lat: 13.0034,
+      lng: 80.1972,
+      locationId: "chennai",
+      district: "Chennai",
+      state: "Tamil Nadu",
+      status: "OPEN",
+      capacity: "850 / 1,200 Persons",
+      distance: "1.8 km (4 min drive)",
+      facilities: "24/7 Power Generator, Clean Water, Medical Post, Sanitation.",
+      verified: true
+    },
+    {
+      id: "shelter-tiruvallur",
+      name: "Tiruvallur Cyclone Relief Complex",
+      lat: 13.1439,
+      lng: 79.9050,
+      locationId: "tiruvallur",
+      district: "Tiruvallur",
+      state: "Tamil Nadu",
+      status: "OPEN",
+      capacity: "1,100 / 1,500 Persons",
+      distance: "2.4 km (6 min drive)",
+      facilities: "Emergency Kitchen, First Aid Camp, High-Ground Ramp.",
+      verified: true
+    },
+    {
+      id: "shelter-coimbatore",
+      name: "Coimbatore South Civil Defense Base",
+      lat: 10.9980,
+      lng: 76.9650,
+      locationId: "coimbatore",
+      district: "Coimbatore",
+      state: "Tamil Nadu",
+      status: "OPEN",
+      capacity: "700 / 1,000 Persons",
+      distance: "3.1 km (7 min drive)",
+      facilities: "Diesel Generator, Trauma Ambulance Post, Drinking Water.",
+      verified: true
+    },
+    {
+      id: "shelter-madurai",
+      name: "Madurai North Relief Center",
+      lat: 9.9390,
+      lng: 78.1217,
+      locationId: "madurai",
+      district: "Madurai",
+      state: "Tamil Nadu",
+      status: "OPEN",
+      capacity: "600 / 800 Persons",
+      distance: "2.0 km (5 min drive)",
+      facilities: "Flood Relief Boats, Clean Water, Emergency Ration Store.",
+      verified: true
+    },
+    {
+      id: "shelter-nilgiris",
+      name: "Ooty Mountain Disaster Rescue Shelter",
+      lat: 11.4102,
+      lng: 76.6950,
+      locationId: "nilgiris",
+      district: "Nilgiris",
+      state: "Tamil Nadu",
+      status: "OPEN",
+      capacity: "450 / 600 Persons",
+      distance: "1.5 km (4 min drive)",
+      facilities: "Landslide Evac Gear, Warm Blankets, VHF Radio Station.",
+      verified: true
+    },
+    {
+      id: "shelter-gorakhpur",
+      name: "Gorakhpur Flood Relief Center",
+      lat: 26.7606,
+      lng: 83.3732,
+      locationId: "ml-forecast-region",
+      district: "Gorakhpur",
+      state: "Uttar Pradesh",
+      status: "OPEN",
+      capacity: "950 / 1,200 Persons",
+      distance: "1.9 km (5 min drive)",
+      facilities: "Flood Rescue Boats, Medical Post, Clean Water Tankers.",
+      verified: true
+    }
   ]
 };

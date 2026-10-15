@@ -176,9 +176,16 @@
   <!-- ==========================================================================
        2. MAIN APP NAVIGATION HEADER (Dashboard & Inner Views)
        ========================================================================== -->
-  <!-- ==========================================================================
-       2. MAIN APP NAVIGATION HEADER (Dashboard & Inner Views)
-       ========================================================================== -->
+  <!-- Offline Emergency Status Banner -->
+  <div id="offline-status-banner" class="hidden sticky top-0 z-[60] bg-amber-950/95 border-b border-amber-500/50 text-amber-200 px-4 py-2 text-xs font-mono flex items-center justify-between shadow-xl backdrop-blur-md">
+    <div class="flex items-center space-x-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+      <span class="font-bold uppercase tracking-wider">OFFLINE EMERGENCY ACCESS:</span>
+      <span>Network disconnected. Verified emergency protocols, hotlines & your Go-Bag checklist remain 100% available offline.</span>
+    </div>
+    <span class="text-[10px] text-amber-300 font-bold bg-amber-900/80 px-2 py-0.5 rounded border border-amber-500/40">CACHED PROTOCOLS</span>
+  </div>
+
   <header id="app-header" class="hidden sticky top-0 z-50 glass-header border-b border-cyan-500/30 transition-all duration-300">
     <div class="container mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
       <!-- Logo & System Status -->
@@ -869,7 +876,7 @@
             <span id="mysafety-risk-text" class="font-black text-sm uppercase text-orange-400">⚠️ HIGH THUNDERSTORM RISK</span>
           </div>
           <div class="text-right border-l border-slate-800 pl-4">
-            <div class="text-[10px] text-gray-400 uppercase">HAZARD ETA</div>
+            <div id="mysafety-timer-label" class="text-[10px] text-gray-400 uppercase">HAZARD ETA</div>
             <div id="timer-simple-display" class="text-xl font-black text-red-400 glow-red">01:24:36</div>
           </div>
         </div>
@@ -884,35 +891,35 @@
         
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 font-mono text-xs">
           <!-- Helpline 1 -->
-          <a href="tel:112" class="p-3 rounded-xl bg-red-950/30 border border-red-500/40 hover:border-red-400 transition group block">
+          <a href="tel:112" aria-label="Call National Emergency 112 Toll-Free" class="p-3 rounded-xl bg-red-950/30 border border-red-500/40 hover:border-red-400 transition group block focus:outline-none focus:ring-2 focus:ring-red-400">
             <div class="text-red-400 text-[10px] font-bold uppercase">NATIONAL EMERGENCY</div>
             <div class="text-xl font-black text-white group-hover:text-red-300 mt-1">112</div>
             <div class="text-[10px] text-red-400 mt-1 flex items-center"><span>📞 Call Toll-Free</span></div>
           </a>
 
           <!-- Helpline 2 -->
-          <a href="tel:1070" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 transition group block">
+          <a href="tel:1070" aria-label="Call State Disaster Management Authority 1070" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 transition group block focus:outline-none focus:ring-2 focus:ring-cyan-400">
             <div class="text-cyan-400 text-[10px] font-bold uppercase">STATE DISASTER (SDMA)</div>
             <div class="text-xl font-black text-white group-hover:text-cyan-300 mt-1">1070</div>
             <div class="text-[10px] text-gray-400 mt-1">Control Room & Relief</div>
           </a>
 
           <!-- Helpline 3 -->
-          <a href="tel:101" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-orange-500/40 transition group block">
+          <a href="tel:101" aria-label="Call Fire and Rescue Emergency 101" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-orange-500/40 transition group block focus:outline-none focus:ring-2 focus:ring-orange-400">
             <div class="text-orange-400 text-[10px] font-bold uppercase">FIRE & RESCUE</div>
             <div class="text-xl font-black text-white group-hover:text-orange-300 mt-1">101</div>
             <div class="text-[10px] text-gray-400 mt-1">Emergency Extrication</div>
           </a>
 
           <!-- Helpline 4 -->
-          <a href="tel:108" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/40 transition group block">
+          <a href="tel:108" aria-label="Call Ambulance and Medical Emergency 108" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/40 transition group block focus:outline-none focus:ring-2 focus:ring-emerald-400">
             <div class="text-emerald-400 text-[10px] font-bold uppercase">AMBULANCE / MEDICAL</div>
             <div class="text-xl font-black text-white group-hover:text-emerald-300 mt-1">108</div>
             <div class="text-[10px] text-gray-400 mt-1">24/7 Trauma Care</div>
           </a>
 
           <!-- Helpline 5 -->
-          <a href="tel:1077" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/40 transition group block">
+          <a href="tel:1077" aria-label="Call District Collector Emergency Helpline 1077" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/40 transition group block focus:outline-none focus:ring-2 focus:ring-purple-400">
             <div class="text-purple-400 text-[10px] font-bold uppercase">DISTRICT HELPLINE</div>
             <div class="text-xl font-black text-white group-hover:text-purple-300 mt-1">1077</div>
             <div class="text-[10px] text-gray-400 mt-1">District Collector EOC</div>
@@ -1037,37 +1044,37 @@
             <!-- Checklist Items -->
             <div class="space-y-2.5 text-xs font-mono">
               <label class="flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-cyan-500/30 cursor-pointer transition">
-                <input type="checkbox" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
+                <input type="checkbox" data-item-id="flashlight" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
                 <span class="text-gray-200">🔦 Flashlight & Extra Batteries</span>
               </label>
 
               <label class="flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-cyan-500/30 cursor-pointer transition">
-                <input type="checkbox" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
+                <input type="checkbox" data-item-id="powerbank" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
                 <span class="text-gray-200">🔋 Power Bank & Cable</span>
               </label>
 
               <label class="flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-cyan-500/30 cursor-pointer transition">
-                <input type="checkbox" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
+                <input type="checkbox" data-item-id="water" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
                 <span class="text-gray-200">💧 3 Days Water (3L/person/day)</span>
               </label>
 
               <label class="flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-cyan-500/30 cursor-pointer transition">
-                <input type="checkbox" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
+                <input type="checkbox" data-item-id="food" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
                 <span class="text-gray-200">🥫 Dry Non-Perishable Food</span>
               </label>
 
               <label class="flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-cyan-500/30 cursor-pointer transition">
-                <input type="checkbox" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
+                <input type="checkbox" data-item-id="firstaid" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
                 <span class="text-gray-200">🩺 First Aid Kit & Medicines</span>
               </label>
 
               <label class="flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-cyan-500/30 cursor-pointer transition">
-                <input type="checkbox" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
+                <input type="checkbox" data-item-id="documents" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
                 <span class="text-gray-200">📄 Waterproof Pouch (ID & Cash)</span>
               </label>
 
               <label class="flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-cyan-500/30 cursor-pointer transition">
-                <input type="checkbox" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
+                <input type="checkbox" data-item-id="whistle" class="gobag-checkbox rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-500">
                 <span class="text-gray-200">📢 Whistle & Thermal Blanket</span>
               </label>
             </div>
@@ -1075,19 +1082,20 @@
 
           <!-- Nearby Relief Shelter Finder -->
           <div class="glass-panel p-5 rounded-2xl border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950">
-            <h3 class="text-xs font-bold text-cyan-400 font-mono uppercase mb-3 flex items-center">
-              <span>🏢 NEAREST EMERGENCY RELIEF SHELTER</span>
+            <h3 class="text-xs font-bold text-cyan-400 font-mono uppercase mb-3 flex items-center justify-between">
+              <span class="flex items-center"><span class="mr-1.5">🏢</span>NEAREST EMERGENCY RELIEF SHELTER</span>
+              <span id="shelter-verified-badge" class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40">VERIFIED EOC SITE</span>
             </h3>
 
             <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-xs font-mono mb-4">
               <div class="flex items-center justify-between">
-                <span class="font-bold text-white text-sm">St. Thomas Community Shelter #4</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">OPEN</span>
+                <span id="shelter-name" class="font-bold text-white text-sm">St. Thomas Community Shelter #4</span>
+                <span id="shelter-status-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">OPEN</span>
               </div>
-              <div class="text-gray-300"><b>Distance:</b> 1.8 km (4 min drive)</div>
-              <div class="text-gray-300"><b>Shelter Capacity:</b> 850 / 1,200 Persons</div>
+              <div class="text-gray-300"><b>Distance:</b> <span id="shelter-distance">1.8 km (4 min drive)</span></div>
+              <div class="text-gray-300"><b>Shelter Capacity:</b> <span id="shelter-capacity">850 / 1,200 Persons</span></div>
               <div class="text-[11px] text-gray-400 pt-1 border-t border-slate-800">
-                <b>Facilities:</b> 24/7 Power Generator, Clean Water, Medical Post, Sanitation.
+                <b>Facilities:</b> <span id="shelter-facilities">24/7 Power Generator, Clean Water, Medical Post, Sanitation.</span>
               </div>
             </div>
 

@@ -21,8 +21,89 @@ class AlertoraAPIService {
     } else {
       this.baseURL = "http://localhost:8000/api";
     }
+
+    // Centralized SSE Connection Manager State
+    this.eventSource = null;
+    this.sseRetryCount = 0;
+    this.sseMaxRetryInterval = 30000;
+    this.sseReconnectTimer = null;
+    this.sseConnectionEpoch = 0;
+    this.sseExplicitStop = false;
+    this.sseCallbacks = {};
+    this.sseState = "DISCONNECTED";
+
+    // Setup network online/offline listeners for resilient SSE management
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", () => {
+        console.log("[ALERTORA SSE] Browser back online. Resuming connection if needed...");
+        if (this.sseState === "OFFLINE" || this.sseState === "RECONNECTING" || this.sseState === "DISCONNECTED") {
+          this.sseRetryCount = 0;
+          this.connectSSE();
+        }
+      });
+      window.addEventListener("offline", () => {
+        console.warn("[ALERTORA SSE] Browser is offline. Suspending active retry timers...");
+        if (this.sseReconnectTimer) {
+          clearTimeout(this.sseReconnectTimer);
+          this.sseReconnectTimer = null;
+        }
+        if (this.eventSource) {
+          this.eventSource.close();
+          this.eventSource = null;
+        }
+        this.setSSEState("OFFLINE");
+      });
+    }
   }
 
+  // ------------------------------------------------------------------------
+  // Canonical Region Normalizer (Defensive Null-Safety Boundary)
+  // ------------------------------------------------------------------------
+  normalizeLocation(loc) {
+    if (!loc || typeof loc !== "object") {
+      return {
+        id: "Grid-Default",
+        name: "Grid-Default",
+        region: "Grid-Default",
+        currentRisk: "LOW",
+        lat: 0,
+        lng: 0,
+        temp: 28.0,
+        humidity: 75,
+        windSpeed: 25,
+        pressure: 1008.0,
+        rainfallRate: 0,
+        nextHazardETA: null,
+        nextHazardType: "None",
+        nowcast: []
+      };
+    }
+
+    const id = loc.id || loc.region_id || loc.gridId || (loc.name ? loc.name.toLowerCase().replace(/[\s\/]+/g, "-") : "Grid-Default");
+    const name = loc.name || loc.region || loc.district || loc.id || "Grid-Default";
+    const region = loc.region || loc.region_id || loc.district || name;
+    const currentRisk = (loc.currentRisk || loc.risk_level || loc.risk || "LOW").toUpperCase();
+    const lat = typeof loc.lat === "number" ? loc.lat : (typeof loc.latitude === "number" ? loc.latitude : 0);
+    const lng = typeof loc.lng === "number" ? loc.lng : (typeof loc.longitude === "number" ? loc.longitude : 0);
+
+    return {
+      ...loc,
+      id: String(id),
+      name: String(name),
+      region: String(region),
+      currentRisk: String(currentRisk),
+      lat: Number(lat),
+      lng: Number(lng),
+      temp: typeof loc.temp === "number" ? loc.temp : 28.0,
+      humidity: typeof loc.humidity === "number" ? loc.humidity : 75,
+      windSpeed: typeof loc.windSpeed === "number" ? loc.windSpeed : 25,
+      pressure: typeof loc.pressure === "number" ? loc.pressure : 1008.0,
+      rainfallRate: typeof loc.rainfallRate === "number" ? loc.rainfallRate : 0,
+      nextHazardETA: loc.nextHazardETA || null,
+      nextHazardType: loc.nextHazardType || (currentRisk === "LOW" ? "Routine Monitoring" : "Convective Cell"),
+      nowcast: Array.isArray(loc.nowcast) && loc.nowcast.length > 0 ? loc.nowcast : []
+    };
+  }
 
   // ------------------------------------------------------------------------
   // Fetch System Status
@@ -49,7 +130,7 @@ class AlertoraAPIService {
   }
 
   // ------------------------------------------------------------------------
-  // Fetch All Locations
+  // Fetch All Locations (with Canonical Boundary Normalization)
   // ------------------------------------------------------------------------
   async getLocations() {
     if (this.useLiveBackend) {
@@ -60,7 +141,10 @@ class AlertoraAPIService {
           throw new Error(`HTTP ${response.status}`);
         }
 
-        return await response.json();
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map(l => this.normalizeLocation(l));
+        }
       } catch (err) {
         console.warn(
           "Live API locations unavailable, using simulated locations.",
@@ -69,7 +153,10 @@ class AlertoraAPIService {
       }
     }
 
-    return ALERTORA_DATA.locations;
+    const fallbackLocs = (typeof ALERTORA_DATA !== "undefined" && Array.isArray(ALERTORA_DATA.locations))
+      ? ALERTORA_DATA.locations
+      : [];
+    return fallbackLocs.map(l => this.normalizeLocation(l));
   }
 
   // ------------------------------------------------------------------------
@@ -440,61 +527,167 @@ class AlertoraAPIService {
     }
   }
 
-  // Real-Time Server-Sent Events (SSE) Client
+  // ------------------------------------------------------------------------
+  // Centralized Server-Sent Events (SSE) Manager (Bounded Backoff & Safe Lifecycle)
+  // ------------------------------------------------------------------------
+  setSSEState(newState) {
+    this.sseState = newState;
+    if (typeof this.sseCallbacks.onStateChange === "function") {
+      try {
+        this.sseCallbacks.onStateChange(newState);
+      } catch (err) {
+        console.warn("[ALERTORA SSE] Error in onStateChange callback:", err);
+      }
+    }
+  }
+
   initSSEConnection(callbacks = {}) {
-    if (this.eventSource) {
-      this.eventSource.close();
+    this.sseCallbacks = callbacks;
+    this.sseExplicitStop = false;
+    this.sseRetryCount = 0;
+    return this.connectSSE();
+  }
+
+  connectSSE() {
+    if (this.sseExplicitStop) {
+      return null;
     }
 
+    // Check if network is known to be offline
+    if (typeof window !== "undefined" && window.navigator && window.navigator.onLine === false) {
+      this.setSSEState("OFFLINE");
+      return null;
+    }
+
+    // Clear any pending retry timer before starting a new connection
+    if (this.sseReconnectTimer) {
+      clearTimeout(this.sseReconnectTimer);
+      this.sseReconnectTimer = null;
+    }
+
+    // Close any previous EventSource instance to prevent duplicate connections
+    if (this.eventSource) {
+      try {
+        this.eventSource.close();
+      } catch (e) {
+        // Safe ignore
+      }
+      this.eventSource = null;
+    }
+
+    // Increment epoch to invalidate callbacks from obsolete connections
+    this.sseConnectionEpoch++;
+    const currentEpoch = this.sseConnectionEpoch;
+
     const sseUrl = `${this.baseURL}/events/stream`;
-    console.log(`[ALERTORA SSE] Connecting to real-time event stream at ${sseUrl}...`);
+    console.log(`[ALERTORA SSE] Establishing connection to ${sseUrl} (Epoch #${currentEpoch})...`);
+    this.setSSEState("CONNECTING");
 
     try {
-      this.eventSource = new EventSource(sseUrl);
+      const es = new EventSource(sseUrl);
+      this.eventSource = es;
 
-      this.eventSource.onopen = (evt) => {
-        console.log("[ALERTORA SSE] Connection established successfully.");
-        if (typeof callbacks.onStateChange === "function") {
-          callbacks.onStateChange("CONNECTED");
+      es.onopen = (evt) => {
+        if (this.sseConnectionEpoch !== currentEpoch) {
+          try { es.close(); } catch (_) {}
+          return;
         }
+        console.log("[ALERTORA SSE] Real-time event stream connected.");
+        this.sseRetryCount = 0; // Reset retry counter on successful connection
+        this.setSSEState("CONNECTED");
       };
 
-      this.eventSource.onerror = (err) => {
-        console.warn("[ALERTORA SSE] Connection dropped or pending reconnect...", err);
-        if (typeof callbacks.onStateChange === "function") {
-          callbacks.onStateChange("RECONNECTING");
+      es.onerror = (err) => {
+        if (this.sseConnectionEpoch !== currentEpoch) {
+          return;
         }
+
+        console.warn("[ALERTORA SSE] Stream error or drop. Cleaning up connection...", err);
+        try {
+          es.close();
+        } catch (_) {}
+        this.eventSource = null;
+
+        if (this.sseExplicitStop) {
+          this.setSSEState("DISCONNECTED");
+          return;
+        }
+
+        if (typeof window !== "undefined" && window.navigator && window.navigator.onLine === false) {
+          this.setSSEState("OFFLINE");
+          return;
+        }
+
+        this.setSSEState("RECONNECTING");
+
+        // Bounded Exponential Backoff with Jitter (max 30 seconds)
+        const baseDelay = Math.min(1000 * Math.pow(2, this.sseRetryCount), this.sseMaxRetryInterval);
+        const jitter = Math.floor(Math.random() * 1000);
+        const delay = Math.min(baseDelay + jitter, this.sseMaxRetryInterval);
+
+        this.sseRetryCount = Math.min(this.sseRetryCount + 1, 10);
+        console.log(`[ALERTORA SSE] Scheduling reconnect in ${delay}ms (attempt #${this.sseRetryCount})...`);
+
+        this.sseReconnectTimer = setTimeout(() => {
+          if (this.sseConnectionEpoch === currentEpoch && !this.sseExplicitStop) {
+            this.connectSSE();
+          }
+        }, delay);
       };
 
-      // Register standard typed event listeners
+      // Helper to register single protected listener per event
       const registerListener = (eventName, handler) => {
-        if (typeof handler === "function") {
-          this.eventSource.addEventListener(eventName, (e) => {
+        es.addEventListener(eventName, (e) => {
+          if (this.sseConnectionEpoch !== currentEpoch) {
+            return; // Discard stale event from prior connection
+          }
+          if (typeof handler === "function") {
             try {
               const data = JSON.parse(e.data);
               handler(data);
             } catch (ex) {
               console.error(`[ALERTORA SSE] Error parsing ${eventName} payload:`, ex);
             }
-          });
-        }
+          }
+        });
       };
 
-      registerListener("forecast_updated", callbacks.onForecastUpdated);
-      registerListener("risk_zones_updated", callbacks.onRiskZonesUpdated);
-      registerListener("storm_trajectory_updated", callbacks.onStormTrajectoryUpdated);
-      registerListener("alert_created", callbacks.onAlertCreated);
-      registerListener("system_status_updated", callbacks.onSystemStatusUpdated);
-      registerListener("heartbeat", callbacks.onHeartbeat);
+      registerListener("forecast_updated", this.sseCallbacks.onForecastUpdated);
+      registerListener("risk_zones_updated", this.sseCallbacks.onRiskZonesUpdated);
+      registerListener("storm_trajectory_updated", this.sseCallbacks.onStormTrajectoryUpdated);
+      registerListener("alert_created", this.sseCallbacks.onAlertCreated);
+      registerListener("system_status_updated", this.sseCallbacks.onSystemStatusUpdated);
+      registerListener("heartbeat", this.sseCallbacks.onHeartbeat);
 
       return this.eventSource;
     } catch (e) {
       console.warn("[ALERTORA SSE] EventSource unavailable:", e);
-      if (typeof callbacks.onStateChange === "function") {
-        callbacks.onStateChange("DISCONNECTED");
-      }
+      this.setSSEState("DISCONNECTED");
       return null;
     }
+  }
+
+  disconnectSSE() {
+    console.log("[ALERTORA SSE] Explicitly disconnecting real-time stream...");
+    this.sseExplicitStop = true;
+    this.sseConnectionEpoch++;
+    if (this.sseReconnectTimer) {
+      clearTimeout(this.sseReconnectTimer);
+      this.sseReconnectTimer = null;
+    }
+    if (this.eventSource) {
+      try {
+        this.eventSource.close();
+      } catch (_) {}
+      this.eventSource = null;
+    }
+    this.setSSEState("DISCONNECTED");
+  }
+
+  reconnectSSE() {
+    this.sseExplicitStop = false;
+    this.sseRetryCount = 0;
+    return this.connectSSE();
   }
 
   // Register device for spatial geohash-targeted notifications

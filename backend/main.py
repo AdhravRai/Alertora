@@ -166,6 +166,15 @@ def read_index():
     raise HTTPException(status_code=404, detail="index.html not found")
 
 
+@app.get("/sw.js")
+def read_service_worker():
+    """Root endpoint for PWA Service Worker."""
+    sw_file = ROOT_DIR / "sw.js"
+    if sw_file.exists():
+        return FileResponse(sw_file, media_type="application/javascript", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="Service worker not found")
+
+
 @app.get("/api/system-status")
 def get_system_status():
     return {
@@ -193,16 +202,58 @@ def get_prediction(location_id: str = "chennai", lat: float = 13.0827, lng: floa
 
 @app.get("/api/locations")
 def get_locations():
-    """Returns the forecast location represented by the ML handoff."""
-    current_position = (
-        DEVELOPMENT_FIXTURE["storms"]["storms"][0]["current_position"]
-    )
+    """
+    Returns the forecast location represented by the ML handoff,
+    normalized with canonical region metadata and defensive null-safety.
+    """
+    storms_fixture = DEVELOPMENT_FIXTURE.get("storms") or {}
+    storms_list = storms_fixture.get("storms") or []
+    first_storm = storms_list[0] if (isinstance(storms_list, list) and len(storms_list) > 0) else {}
+    current_position = first_storm.get("current_position") or {}
+
+    lat = current_position.get("latitude")
+    if lat is None or not isinstance(lat, (int, float)):
+        lat = 26.3267
+    lon = current_position.get("longitude")
+    if lon is None or not isinstance(lon, (int, float)):
+        lon = 82.8067
+
+    current_risk = DEVELOPMENT_FIXTURE.get("current_risk") or {}
+    risk_level = current_risk.get("risk_level") or "MODERATE"
+
     return [
         {
             "id": "ml-forecast-region",
+            "region_id": "IMDAA-July29",
             "name": "ML Forecast Region",
-            "latitude": current_position["latitude"],
-            "longitude": current_position["longitude"],
+            "region": "NCMRWF IMDAA Domain",
+            "district": "IMDAA Storm Sector",
+            "state": "Uttar Pradesh",
+            "latitude": lat,
+            "longitude": lon,
+            "lat": lat,
+            "lng": lon,
+            "currentRisk": risk_level,
+            "risk_level": risk_level,
+            "temp": 28.5,
+            "humidity": 92,
+            "windSpeed": 45,
+            "pressure": 1002.1,
+            "rainfallRate": 38,
+            "nextHazardETA": "01h 15m",
+            "nextHazardType": "Convective Cell Nowcast",
+            "nowcast": [
+                {
+                    "hour": "NOW",
+                    "time": "02:00",
+                    "thunderstorm": 88,
+                    "hail": 24,
+                    "cloudburst": 62,
+                    "lightning": 85,
+                    "rainfall": 38,
+                    "wind": 45,
+                }
+            ],
         }
     ]
 

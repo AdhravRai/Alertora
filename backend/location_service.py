@@ -8,6 +8,7 @@ import json
 import logging
 import math
 import re
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -272,35 +273,41 @@ class LocationAnalysisService:
             f"wind_speed_unit=ms&past_hours=6&forecast_hours=2"
         )
 
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Alertora-WeatherIngestion/2.5"})
-            with urllib.request.urlopen(req, timeout=6) as response:
-                data = json.loads(response.read().decode())
-                hourly = data.get("hourly", {})
-                times = hourly.get("time", [])
+        last_err = None
+        for attempt in range(3):
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Alertora-WeatherIngestion/2.5"})
+                with urllib.request.urlopen(req, timeout=8) as response:
+                    data = json.loads(response.read().decode())
+                    hourly = data.get("hourly", {})
+                    times = hourly.get("time", [])
 
-                if not times or len(times) < 4:
-                    raise ValueError("Insufficient hourly records returned by weather provider.")
+                    if not times or len(times) < 4:
+                        raise ValueError("Insufficient hourly records returned by weather provider.")
 
-                # Observation index is the latest past/current hour (typically index -2 or -3)
-                # Since past_hours=6 and forecast_hours=2, the current observation is at index 6
-                obs_idx = min(6, len(times) - 2)
-                lag1_idx = obs_idx - 1
-                lag3_idx = obs_idx - 3
+                    # Observation index is the latest past/current hour (typically index -2 or -3)
+                    # Since past_hours=6 and forecast_hours=2, the current observation is at index 6
+                    obs_idx = min(6, len(times) - 2)
+                    lag1_idx = obs_idx - 1
+                    lag3_idx = obs_idx - 3
 
-                return {
-                    "provider": "Open-Meteo NWP Reanalysis & Multi-Model Ingestion (ECMWF/GFS)",
-                    "observation_time": times[obs_idx],
-                    "forecast_time": times[obs_idx + 1],
-                    "obs_idx": obs_idx,
-                    "hourly": hourly,
-                    "lag1_idx": lag1_idx,
-                    "lag3_idx": lag3_idx,
-                }
+                    return {
+                        "provider": "Open-Meteo NWP Reanalysis & Multi-Model Ingestion (ECMWF/GFS)",
+                        "observation_time": times[obs_idx],
+                        "forecast_time": times[obs_idx + 1],
+                        "obs_idx": obs_idx,
+                        "hourly": hourly,
+                        "lag1_idx": lag1_idx,
+                        "lag3_idx": lag3_idx,
+                    }
 
-        except Exception as e:
-            logger.error(f"[LocationService] Weather retrieval failed for ({lat}, {lon}): {e}")
-            raise RuntimeError(f"Could not retrieve real meteorological data: {e}")
+            except Exception as e:
+                last_err = e
+                if attempt < 2:
+                    time.sleep(0.8 * (attempt + 1))
+                else:
+                    logger.error(f"[LocationService] Weather retrieval failed for ({lat}, {lon}) after 3 attempts: {e}")
+                    raise RuntimeError(f"Could not retrieve real meteorological data: {e}")
 
     def extract_features(self, weather_data: Dict[str, Any]) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """

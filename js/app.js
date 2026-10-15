@@ -42,7 +42,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     stormSimulationActive: false,
     stormSimulationInterval: null,
     countdownSeconds: 5076, // 01:24:36
+    countdownTargetTimestamp: Date.now() + (5076 * 1000),
     countdownInterval: null,
+    activeShelter: null,
+    shelterMarker: null,
     notificationsEnabled: {
       severe: true,
       lightning: true,
@@ -290,16 +293,68 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.switchAppView = switchView;
 
-  // Populate Location Dropdown
+  // Populate Location Dropdown with Canonical Region Normalization & Null-Safety
   function populateLocationSelector(locList) {
     const sel = document.getElementById("location-selector");
+    if (!sel) return;
     sel.innerHTML = "";
-    locList.forEach(l => {
+
+    if (!locList || !Array.isArray(locList) || locList.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Forecast Region: Grid-Default (Syncing...)";
+      sel.appendChild(opt);
+      return;
+    }
+
+    const mergedList = [];
+    const seenIds = new Set();
+
+    // 1. Process API locations with normalization
+    locList.forEach(rawLoc => {
+      const l = window.alertoraAPI ? window.alertoraAPI.normalizeLocation(rawLoc) : rawLoc;
+      if (l && l.id && !seenIds.has(l.id)) {
+        seenIds.add(l.id);
+        mergedList.push(l);
+      }
+    });
+
+    // 2. Ensure baseline monitored cities are present in selector
+    if (typeof ALERTORA_DATA !== "undefined" && Array.isArray(ALERTORA_DATA.locations)) {
+      ALERTORA_DATA.locations.forEach(rawLoc => {
+        const l = window.alertoraAPI ? window.alertoraAPI.normalizeLocation(rawLoc) : rawLoc;
+        if (l && l.id && !seenIds.has(l.id)) {
+          seenIds.add(l.id);
+          mergedList.push(l);
+        }
+      });
+    }
+
+    // 3. Register any new ML forecast regions into ALERTORA_DATA.locations so updateDashboardForLocation can read them
+    if (typeof ALERTORA_DATA !== "undefined" && Array.isArray(ALERTORA_DATA.locations)) {
+      mergedList.forEach(l => {
+        const exists = ALERTORA_DATA.locations.some(existing => existing.id === l.id);
+        if (!exists) {
+          ALERTORA_DATA.locations.push(l);
+        }
+      });
+    }
+
+    // 4. Render select options without ever printing undefined
+    mergedList.forEach(l => {
       const opt = document.createElement("option");
       opt.value = l.id;
-      opt.textContent = `${l.name} (${l.currentRisk})`;
+      const riskText = l.currentRisk ? ` (${l.currentRisk})` : "";
+      const regionName = l.name || l.region || l.district || l.id || "Grid-Default";
+      opt.textContent = `${regionName}${riskText}`;
       sel.appendChild(opt);
     });
+
+    // Preserve selected location or default to first valid
+    const hasCurrent = mergedList.some(l => l.id === state.selectedLocationId);
+    if (!hasCurrent && mergedList.length > 0) {
+      state.selectedLocationId = mergedList[0].id;
+    }
     sel.value = state.selectedLocationId;
     updateDashboardForLocation(state.selectedLocationId);
   }
@@ -447,16 +502,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  // Parse ETA string to seconds
+  // Parse ETA string to seconds (returns null if no actionable threat / invalid)
   function parseEtaToSeconds(etaStr) {
-    if (!etaStr) return 5040;
-    const hm = etaStr.match(/(\d+)h\s*(\d+)m/i);
+    if (!etaStr || typeof etaStr !== "string") return null;
+    const clean = etaStr.trim().toLowerCase();
+    if (clean === "none" || clean === "unavailable" || clean === "data unavailable" || clean === "routine monitoring" || clean === "stable" || clean === "n/a") {
+      return null;
+    }
+    const hm = etaStr.match(/(\d+)\s*h(?:rs?|ours?)?\s*(\d+)\s*m(?:ins?)?/i);
     if (hm) return parseInt(hm[1], 10) * 3600 + parseInt(hm[2], 10) * 60;
-    const m = etaStr.match(/(\d+)\s*m/i);
+    const m = etaStr.match(/(\d+)\s*m(?:ins?)?/i);
     if (m) return parseInt(m[1], 10) * 60;
-    const h = etaStr.match(/(\d+)\s*h/i);
+    const h = etaStr.match(/(\d+)\s*h(?:rs?|ours?)?/i);
     if (h) return parseInt(h[1], 10) * 3600;
-    return 5040;
+    return null;
   }
 
   // Helper to get active location object
@@ -479,11 +538,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const leadTime = document.getElementById("countdown-lead-time");
     const confidence = document.getElementById("countdown-confidence");
 
-    if (leadTime && loc && loc.nextHazardETA) {
-      leadTime.textContent = loc.nextHazardETA;
-    }
-
     const r = (risk || "LOW").toUpperCase();
+    const etaSecs = parseEtaToSeconds(loc ? loc.nextHazardETA : null);
+
+    if (leadTime) {
+      if (loc && loc.nextHazardETA && etaSecs !== null) {
+        leadTime.textContent = loc.nextHazardETA;
+      } else {
+        leadTime.textContent = r === "LOW" ? "None (Stable)" : "Unavailable";
+      }
+    }
 
     if (confidence) {
       const conf = r === "EXTREME" ? "94%" : (r === "HIGH" ? "91%" : (r === "MODERATE" ? "84%" : "78%"));
@@ -504,7 +568,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (timerBox) timerBox.className = "bg-black/60 p-4 rounded-xl border border-red-500/40 text-center my-4 font-mono transition-all";
       if (timerLabel) timerLabel.textContent = "CRITICAL IMPACT IN";
-      if (timerDigits) timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-red-500 glow-red";
+      if (timerDigits) {
+        timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-red-500 glow-red";
+        if (!document.getElementById("timer-hours")) {
+          timerDigits.innerHTML = `<span id="timer-hours">--</span><span class="text-gray-600">:</span><span id="timer-minutes">--</span><span class="text-gray-600">:</span><span id="timer-seconds">--</span>`;
+        }
+      }
       if (advisorBtn) advisorBtn.className = "px-3 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-red-600/30";
     } else if (r === "HIGH") {
       if (container) {
@@ -520,7 +589,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (timerBox) timerBox.className = "bg-black/60 p-4 rounded-xl border border-orange-500/40 text-center my-4 font-mono transition-all";
       if (timerLabel) timerLabel.textContent = "ESTIMATED IMPACT IN";
-      if (timerDigits) timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-orange-400 glow-orange";
+      if (timerDigits) {
+        timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-orange-400 glow-orange";
+        if (!document.getElementById("timer-hours")) {
+          timerDigits.innerHTML = `<span id="timer-hours">--</span><span class="text-gray-600">:</span><span id="timer-minutes">--</span><span class="text-gray-600">:</span><span id="timer-seconds">--</span>`;
+        }
+      }
       if (advisorBtn) advisorBtn.className = "px-3 py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-orange-600/30";
     } else if (r === "MODERATE") {
       if (container) {
@@ -536,24 +610,32 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (timerBox) timerBox.className = "bg-black/60 p-4 rounded-xl border border-amber-500/40 text-center my-4 font-mono transition-all";
       if (timerLabel) timerLabel.textContent = "EXPECTED PASSAGE IN";
-      if (timerDigits) timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-amber-400 glow-amber";
+      if (timerDigits) {
+        timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-amber-400 glow-amber";
+        if (!document.getElementById("timer-hours")) {
+          timerDigits.innerHTML = `<span id="timer-hours">--</span><span class="text-gray-600">:</span><span id="timer-minutes">--</span><span class="text-gray-600">:</span><span id="timer-seconds">--</span>`;
+        }
+      }
       if (advisorBtn) advisorBtn.className = "px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-amber-600/30";
     } else {
-      // LOW
+      // LOW: Conditions Stable - Routine Monitoring
       if (container) {
         container.className = "glass-panel p-5 rounded-xl border-emerald-500/50 bg-emerald-950/20 box-glow-emerald relative overflow-hidden transition-all duration-300";
       }
       if (headerTitle) {
         headerTitle.className = "text-emerald-400 font-bold";
-        headerTitle.textContent = "✓ ROUTINE WEATHER MONITORING";
+        headerTitle.textContent = "✓ ROUTINE MONITORING — CONDITIONS STABLE";
       }
       if (riskBadge) {
         riskBadge.className = "px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-200 border border-emerald-500/50 font-bold font-mono";
         riskBadge.textContent = "LOW RISK";
       }
       if (timerBox) timerBox.className = "bg-black/60 p-4 rounded-xl border border-emerald-500/40 text-center my-4 font-mono transition-all";
-      if (timerLabel) timerLabel.textContent = "ROUTINE RE-EVALUATION IN";
-      if (timerDigits) timerDigits.className = "flex items-center justify-center space-x-2 text-3xl md:text-4xl font-extrabold text-emerald-400 glow-emerald";
+      if (timerLabel) timerLabel.textContent = "HAZARD STATUS: ALL CLEAR";
+      if (timerDigits) {
+        timerDigits.className = "flex items-center justify-center space-x-2 text-2xl md:text-3xl font-extrabold text-emerald-400";
+        timerDigits.innerHTML = `<span>STANDBY</span><span class="text-xs text-emerald-300 ml-2 font-normal font-sans">(Radar Monitoring Active)</span>`;
+      }
       if (advisorBtn) advisorBtn.className = "px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-emerald-600/30";
     }
   }
@@ -646,20 +728,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateCountdownCardTheme(gpsLoc.currentRisk, gpsLoc);
     const etaSecs = parseEtaToSeconds(gpsLoc.nextHazardETA);
     state.countdownSeconds = etaSecs;
-    const pad = (n) => String(n).padStart(2, '0');
-    const hrs = Math.floor(etaSecs / 3600);
-    const mins = Math.floor((etaSecs % 3600) / 60);
-    const secs = etaSecs % 60;
+    state.countdownTargetTimestamp = etaSecs !== null ? Date.now() + (etaSecs * 1000) : null;
     const th = document.getElementById("timer-hours");
     const tm = document.getElementById("timer-minutes");
     const ts = document.getElementById("timer-seconds");
-    if (th) th.textContent = pad(hrs);
-    if (tm) tm.textContent = pad(mins);
-    if (ts) ts.textContent = pad(secs);
-
     const timerSimple = document.getElementById("timer-simple-display");
-    if (timerSimple) {
-      timerSimple.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    const timerLabel = document.getElementById("mysafety-timer-label");
+
+    if (etaSecs !== null && (gpsLoc.currentRisk || "").toUpperCase() !== "LOW") {
+      const pad = (n) => String(n).padStart(2, '0');
+      const hrs = Math.floor(etaSecs / 3600);
+      const mins = Math.floor((etaSecs % 3600) / 60);
+      const secs = etaSecs % 60;
+      if (th) th.textContent = pad(hrs);
+      if (tm) tm.textContent = pad(mins);
+      if (ts) ts.textContent = pad(secs);
+      if (timerSimple) {
+        timerSimple.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+        timerSimple.className = "text-xl font-black text-orange-400 glow-orange";
+      }
+      if (timerLabel) timerLabel.textContent = "HAZARD ETA";
+    } else {
+      if (timerSimple) {
+        timerSimple.textContent = "STANDBY (STABLE)";
+        timerSimple.className = "text-xl font-black text-emerald-400 glow-emerald";
+      }
+      if (timerLabel) timerLabel.textContent = "THREAT STATUS";
     }
 
     // Show GPS status badge and coordinates display
@@ -770,20 +864,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Sync countdown timer seconds to location hazard ETA
     const etaSecs = parseEtaToSeconds(loc.nextHazardETA);
     state.countdownSeconds = etaSecs;
-    const pad = (n) => String(n).padStart(2, '0');
-    const hrs = Math.floor(etaSecs / 3600);
-    const mins = Math.floor((etaSecs % 3600) / 60);
-    const secs = etaSecs % 60;
+    state.countdownTargetTimestamp = etaSecs !== null ? Date.now() + (etaSecs * 1000) : null;
     const th = document.getElementById("timer-hours");
     const tm = document.getElementById("timer-minutes");
     const ts = document.getElementById("timer-seconds");
-    if (th) th.textContent = pad(hrs);
-    if (tm) tm.textContent = pad(mins);
-    if (ts) ts.textContent = pad(secs);
-
     const timerSimple = document.getElementById("timer-simple-display");
-    if (timerSimple) {
-      timerSimple.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    const timerLabel = document.getElementById("mysafety-timer-label");
+
+    if (etaSecs !== null && (loc.currentRisk || "").toUpperCase() !== "LOW") {
+      const pad = (n) => String(n).padStart(2, '0');
+      const hrs = Math.floor(etaSecs / 3600);
+      const mins = Math.floor((etaSecs % 3600) / 60);
+      const secs = etaSecs % 60;
+      if (th) th.textContent = pad(hrs);
+      if (tm) tm.textContent = pad(mins);
+      if (ts) ts.textContent = pad(secs);
+      if (timerSimple) {
+        timerSimple.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+        const riskColor = (loc.currentRisk || "").toUpperCase() === "EXTREME" ? "text-red-400 glow-red" : ((loc.currentRisk || "").toUpperCase() === "HIGH" ? "text-orange-400 glow-orange" : "text-amber-400 glow-amber");
+        timerSimple.className = `text-xl font-black ${riskColor}`;
+      }
+      if (timerLabel) timerLabel.textContent = "HAZARD ETA";
+    } else {
+      if (timerSimple) {
+        timerSimple.textContent = "STANDBY (STABLE)";
+        timerSimple.className = "text-xl font-black text-emerald-400 glow-emerald";
+      }
+      if (timerLabel) timerLabel.textContent = "THREAT STATUS";
     }
 
     // Render AI Nowcast Timeline
@@ -1458,24 +1565,77 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (state.countdownInterval) clearInterval(state.countdownInterval);
 
     state.countdownInterval = setInterval(() => {
-      if (state.countdownSeconds <= 0) {
-        state.countdownSeconds = 7200; // Reset loop
-      }
-      state.countdownSeconds--;
+      const loc = getCurrentLocation();
+      const risk = (loc && loc.currentRisk ? loc.currentRisk : "LOW").toUpperCase();
 
+      // If conditions are stable (LOW risk) or no countdown target exists
+      if (risk === "LOW" || state.countdownSeconds === null) {
+        const timerSimple = document.getElementById("timer-simple-display");
+        if (timerSimple) {
+          timerSimple.textContent = "STANDBY (STABLE)";
+          timerSimple.className = "text-xl font-black text-emerald-400 glow-emerald";
+        }
+        const timerLabel = document.getElementById("mysafety-timer-label");
+        if (timerLabel) {
+          timerLabel.textContent = "THREAT STATUS";
+        }
+        return;
+      }
+
+      // If active threat (EXTREME, HIGH, MODERATE), compute remaining seconds from target
+      if (state.countdownTargetTimestamp) {
+        const remaining = Math.max(0, Math.round((state.countdownTargetTimestamp - Date.now()) / 1000));
+        state.countdownSeconds = remaining;
+      } else {
+        state.countdownSeconds = Math.max(0, state.countdownSeconds - 1);
+      }
+
+      const pad = (n) => String(n).padStart(2, '0');
       const hrs = Math.floor(state.countdownSeconds / 3600);
       const mins = Math.floor((state.countdownSeconds % 3600) / 60);
       const secs = state.countdownSeconds % 60;
 
-      const pad = (n) => String(n).padStart(2, '0');
-      document.getElementById("timer-hours").textContent = pad(hrs);
-      document.getElementById("timer-minutes").textContent = pad(mins);
-      document.getElementById("timer-seconds").textContent = pad(secs);
+      const digitsContainer = document.getElementById("countdown-timer-digits");
+      const th = document.getElementById("timer-hours");
+      const tm = document.getElementById("timer-minutes");
+      const ts = document.getElementById("timer-seconds");
 
-      // Simple mode countdown
-      const timerSimple = document.getElementById("timer-simple-display");
-      if (timerSimple) {
-        timerSimple.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+      if (state.countdownSeconds <= 0) {
+        // Hazard onset reached - CLAMP TO 00:00:00 (Do NOT reset to 7200s loop!)
+        if (th) th.textContent = "00";
+        if (tm) tm.textContent = "00";
+        if (ts) ts.textContent = "00";
+        const timerLabel = document.getElementById("countdown-timer-label");
+        if (timerLabel) timerLabel.textContent = "HAZARD ONSET — ACTIVE IMPACT";
+
+        const timerSimple = document.getElementById("timer-simple-display");
+        if (timerSimple) {
+          timerSimple.textContent = "00:00:00 (IMPACT)";
+          timerSimple.className = "text-xl font-black text-red-500 glow-red animate-pulse";
+        }
+        const mySafetyTimerLabel = document.getElementById("mysafety-timer-label");
+        if (mySafetyTimerLabel) {
+          mySafetyTimerLabel.textContent = "IMPACT STATE";
+        }
+      } else {
+        if (th && tm && ts) {
+          th.textContent = pad(hrs);
+          tm.textContent = pad(mins);
+          ts.textContent = pad(secs);
+        } else if (digitsContainer) {
+          digitsContainer.innerHTML = `<span id="timer-hours">${pad(hrs)}</span><span class="text-gray-600">:</span><span id="timer-minutes">${pad(mins)}</span><span class="text-gray-600">:</span><span id="timer-seconds">${pad(secs)}</span>`;
+        }
+
+        const timerSimple = document.getElementById("timer-simple-display");
+        if (timerSimple) {
+          timerSimple.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+          const riskColor = risk === "EXTREME" ? "text-red-400 glow-red" : (risk === "HIGH" ? "text-orange-400 glow-orange" : "text-amber-400 glow-amber");
+          timerSimple.className = `text-xl font-black ${riskColor}`;
+        }
+        const mySafetyTimerLabel = document.getElementById("mysafety-timer-label");
+        if (mySafetyTimerLabel) {
+          mySafetyTimerLabel.textContent = "HAZARD ETA";
+        }
       }
     }, 1000);
   }
@@ -1741,6 +1901,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const banner = document.getElementById("mysafety-risk-banner");
     const riskText = document.getElementById("mysafety-risk-text");
     const timerDisplay = document.getElementById("timer-simple-display");
+    const timerLabel = document.getElementById("mysafety-timer-label");
     
     const risk = (loc.currentRisk || "LOW").toUpperCase();
     if (banner) {
@@ -1750,30 +1911,67 @@ document.addEventListener("DOMContentLoaded", async () => {
           riskText.className = "font-black text-sm uppercase text-red-400";
           riskText.textContent = "🚨 CRITICAL SEVERE WEATHER ALERT";
         }
-        if (timerDisplay) timerDisplay.className = "text-xl font-black text-red-400 glow-red";
+        if (timerLabel) timerLabel.textContent = "HAZARD ETA";
+        if (timerDisplay) {
+          timerDisplay.className = "text-xl font-black text-red-400 glow-red";
+          if (state.countdownSeconds !== null) {
+            const pad = (n) => String(n).padStart(2, '0');
+            const hrs = Math.floor(state.countdownSeconds / 3600);
+            const mins = Math.floor((state.countdownSeconds % 3600) / 60);
+            const secs = state.countdownSeconds % 60;
+            timerDisplay.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+          }
+        }
       } else if (risk === "HIGH") {
         banner.className = "w-full md:w-auto p-4 rounded-xl border border-orange-500/40 bg-orange-950/30 flex items-center justify-between gap-4 font-mono shadow-lg box-glow-orange";
         if (riskText) {
           riskText.className = "font-black text-sm uppercase text-orange-400";
           riskText.textContent = "⚠️ HIGH THUNDERSTORM RISK";
         }
-        if (timerDisplay) timerDisplay.className = "text-xl font-black text-orange-400 glow-orange";
+        if (timerLabel) timerLabel.textContent = "HAZARD ETA";
+        if (timerDisplay) {
+          timerDisplay.className = "text-xl font-black text-orange-400 glow-orange";
+          if (state.countdownSeconds !== null) {
+            const pad = (n) => String(n).padStart(2, '0');
+            const hrs = Math.floor(state.countdownSeconds / 3600);
+            const mins = Math.floor((state.countdownSeconds % 3600) / 60);
+            const secs = state.countdownSeconds % 60;
+            timerDisplay.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+          }
+        }
       } else if (risk === "MODERATE") {
         banner.className = "w-full md:w-auto p-4 rounded-xl border border-amber-500/40 bg-amber-950/30 flex items-center justify-between gap-4 font-mono shadow-lg box-glow-amber";
         if (riskText) {
           riskText.className = "font-black text-sm uppercase text-amber-400";
           riskText.textContent = "⚠️ MODERATE WEATHER WATCH";
         }
-        if (timerDisplay) timerDisplay.className = "text-xl font-black text-amber-400 glow-amber";
+        if (timerLabel) timerLabel.textContent = "HAZARD ETA";
+        if (timerDisplay) {
+          timerDisplay.className = "text-xl font-black text-amber-400 glow-amber";
+          if (state.countdownSeconds !== null) {
+            const pad = (n) => String(n).padStart(2, '0');
+            const hrs = Math.floor(state.countdownSeconds / 3600);
+            const mins = Math.floor((state.countdownSeconds % 3600) / 60);
+            const secs = state.countdownSeconds % 60;
+            timerDisplay.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+          }
+        }
       } else {
         banner.className = "w-full md:w-auto p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/30 flex items-center justify-between gap-4 font-mono shadow-lg box-glow-emerald";
         if (riskText) {
           riskText.className = "font-black text-sm uppercase text-emerald-400";
           riskText.textContent = "✓ ROUTINE MONITORING — CONDITIONS STABLE";
         }
-        if (timerDisplay) timerDisplay.className = "text-xl font-black text-emerald-400 glow-emerald";
+        if (timerLabel) timerLabel.textContent = "THREAT STATUS";
+        if (timerDisplay) {
+          timerDisplay.className = "text-xl font-black text-emerald-400 glow-emerald";
+          timerDisplay.textContent = "STANDBY (STABLE)";
+        }
       }
     }
+
+    // Dynamic Shelter Card Population based on selected location
+    populateShelterCardForLocation(loc);
 
     renderMySafetyProtocolBox(currentMySafetyHazard, risk);
   }
@@ -1837,6 +2035,177 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
+  // ==============================================================================
+  // 72-HOUR SURVIVAL GO-BAG CHECKLIST PERSISTENCE (localStorage)
+  // ==============================================================================
+  const GOBAG_STORAGE_KEY = "alertora_go_bag_state";
+  const VALID_GOBAG_ITEMS = ["flashlight", "powerbank", "water", "food", "firstaid", "documents", "whistle"];
+
+  function loadGoBagState() {
+    try {
+      const raw = localStorage.getItem(GOBAG_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (typeof parsed !== "object" || parsed === null) return {};
+      return parsed;
+    } catch (e) {
+      console.warn("[GoBag] Failed to parse stored state, resetting:", e);
+      return {};
+    }
+  }
+
+  function saveGoBagState(stateObj) {
+    try {
+      localStorage.setItem(GOBAG_STORAGE_KEY, JSON.stringify(stateObj));
+    } catch (e) {
+      console.warn("[GoBag] Failed to persist state to localStorage:", e);
+    }
+  }
+
+  function updateGoBagUI() {
+    const checkboxes = document.querySelectorAll(".gobag-checkbox");
+    const countEl = document.getElementById("gobag-count");
+    const progressEl = document.getElementById("gobag-progress-bar");
+    const checked = document.querySelectorAll(".gobag-checkbox:checked").length;
+    const total = checkboxes.length || 7;
+    const pct = Math.round((checked / total) * 100);
+
+    if (countEl) countEl.textContent = `${checked} / ${total} Packed (${pct}%)`;
+    if (progressEl) progressEl.style.width = `${pct}%`;
+  }
+
+  // ==============================================================================
+  // DYNAMIC EMERGENCY RELIEF SHELTER FINDER & GIS NAVIGATION
+  // ==============================================================================
+  function findShelterForLocation(loc) {
+    if (!ALERTORA_DATA || !ALERTORA_DATA.shelters || ALERTORA_DATA.shelters.length === 0) {
+      return null;
+    }
+    if (!loc) return ALERTORA_DATA.shelters[0];
+
+    const locId = (loc.id || "").toLowerCase();
+    const locDist = (loc.district || "").toLowerCase();
+    const locName = (loc.name || loc.placeName || "").toLowerCase();
+
+    // 1. Direct locationId match
+    let shelter = ALERTORA_DATA.shelters.find(s => s.locationId && s.locationId.toLowerCase() === locId);
+    if (shelter) return shelter;
+
+    // 2. District match
+    if (locDist) {
+      shelter = ALERTORA_DATA.shelters.find(s => s.district && s.district.toLowerCase() === locDist);
+      if (shelter) return shelter;
+    }
+
+    // 3. Name substring match
+    shelter = ALERTORA_DATA.shelters.find(s => s.district && locName.includes(s.district.toLowerCase()));
+    if (shelter) return shelter;
+
+    // 4. Nearest by geographic distance if coordinates are present
+    const lat = parseFloat(loc.lat || loc.latitude);
+    const lng = parseFloat(loc.lng || loc.longitude);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      let minDist = Infinity;
+      let nearest = null;
+      ALERTORA_DATA.shelters.forEach(s => {
+        const d = Math.sqrt(Math.pow(s.lat - lat, 2) + Math.pow(s.lng - lng, 2));
+        if (d < minDist) {
+          minDist = d;
+          nearest = s;
+        }
+      });
+      if (nearest) return nearest;
+    }
+
+    return ALERTORA_DATA.shelters[0];
+  }
+
+  function populateShelterCardForLocation(loc) {
+    const shelter = findShelterForLocation(loc);
+    if (!shelter) return;
+    state.activeShelter = shelter;
+
+    const nameEl = document.getElementById("shelter-name");
+    const statusEl = document.getElementById("shelter-status-badge");
+    const distEl = document.getElementById("shelter-distance");
+    const capEl = document.getElementById("shelter-capacity");
+    const facEl = document.getElementById("shelter-facilities");
+
+    if (nameEl) nameEl.textContent = shelter.name;
+    if (statusEl) {
+      statusEl.textContent = shelter.status;
+      statusEl.className = shelter.status === "OPEN"
+        ? "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40"
+        : "px-2 py-0.5 rounded text-[10px] font-bold bg-red-950 text-red-400 border border-red-500/40";
+    }
+    if (distEl) distEl.textContent = shelter.distance;
+    if (capEl) capEl.textContent = shelter.capacity;
+    if (facEl) facEl.textContent = shelter.facilities;
+  }
+
+  function navigateToShelterOnMap(shelter) {
+    if (!shelter) {
+      shelter = state.activeShelter || (ALERTORA_DATA.shelters && ALERTORA_DATA.shelters[0]);
+    }
+    if (!shelter) {
+      showToast("NAVIGATION NOTICE", "No shelter information available.", "AMBER");
+      return;
+    }
+
+    const lat = parseFloat(shelter.lat);
+    const lng = parseFloat(shelter.lng);
+
+    // Strict coordinate validation
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      console.error("[Shelter Nav] Invalid shelter coordinates:", lat, lng);
+      showToast("NAVIGATION ERROR", "Shelter has invalid geographic coordinates.", "RED");
+      return;
+    }
+
+    // Update URL hash with target shelter params
+    window.location.hash = `#map?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&shelterId=${encodeURIComponent(shelter.id)}`;
+
+    // Switch view to map
+    switchView("map");
+
+    // Give Leaflet container time to invalidate size
+    setTimeout(() => {
+      if (state.map) {
+        state.map.invalidateSize();
+        state.map.flyTo([lat, lng], 14, { animate: true, duration: 1.2 });
+
+        // Highlight or drop shelter marker without touching existing radar/storm layers
+        if (state.shelterMarker) {
+          state.map.removeLayer(state.shelterMarker);
+          state.shelterMarker = null;
+        }
+
+        const shelterIcon = L.divIcon({
+          className: "custom-shelter-marker-icon",
+          html: `<div class="relative flex items-center justify-center">
+                  <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-cyan-400 opacity-75"></span>
+                  <div style="background-color:#06b6d4; width:28px; height:28px; border-radius:50%; border:3px solid white; box-shadow:0 0 15px #06b6d4" class="relative flex items-center justify-center text-xs font-bold text-black">🏢</div>
+                 </div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        state.shelterMarker = L.marker([lat, lng], { icon: shelterIcon }).addTo(state.map);
+        state.shelterMarker.bindPopup(`
+          <div class="font-mono text-xs p-1">
+            <div class="font-bold text-cyan-400 text-sm mb-1">${shelter.name}</div>
+            <div class="text-emerald-400 font-bold mb-1">✓ VERIFIED EOC SHELTER SITE (${shelter.status})</div>
+            <div><b>Capacity:</b> ${shelter.capacity}</div>
+            <div><b>Distance:</b> ${shelter.distance}</div>
+            <div class="mt-1 text-gray-300 text-[11px]"><b>Facilities:</b> ${shelter.facilities}</div>
+          </div>
+        `, { maxWidth: 300 }).openPopup();
+      }
+    }, 150);
+
+    showToast("RELIEF SHELTER NAVIGATOR", `Centered Live GIS Map on ${shelter.name}`, "CYAN");
+  }
+
   function initMySafetyEventListeners() {
     document.querySelectorAll(".mysafety-tab-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1845,28 +2214,32 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     });
 
+    // Initialize Go-Bag Checklist from localStorage
+    const savedGoBag = loadGoBagState();
     const checkboxes = document.querySelectorAll(".gobag-checkbox");
-    const countEl = document.getElementById("gobag-count");
-    const progressEl = document.getElementById("gobag-progress-bar");
-
-    const updateChecklist = () => {
-      const checked = document.querySelectorAll(".gobag-checkbox:checked").length;
-      const total = checkboxes.length;
-      const pct = Math.round((checked / total) * 100);
-
-      if (countEl) countEl.textContent = `${checked} / ${total} Packed (${pct}%)`;
-      if (progressEl) progressEl.style.width = `${pct}%`;
-    };
 
     checkboxes.forEach(cb => {
-      cb.addEventListener("change", updateChecklist);
+      const itemId = cb.dataset.itemId;
+      if (itemId && savedGoBag[itemId] === true) {
+        cb.checked = true;
+      }
+
+      cb.addEventListener("change", () => {
+        const currentSaved = loadGoBagState();
+        if (itemId) {
+          currentSaved[itemId] = cb.checked;
+          saveGoBagState(currentSaved);
+        }
+        updateGoBagUI();
+      });
     });
+
+    updateGoBagUI();
 
     const btnShelter = document.getElementById("btn-shelter-navigate");
     if (btnShelter) {
       btnShelter.addEventListener("click", () => {
-        switchView("map");
-        showToast("RELIEF SHELTER NAVIGATOR", "Opened Live GIS Map centered on St. Thomas Community Shelter #4", "CYAN");
+        navigateToShelterOnMap(state.activeShelter);
       });
     }
   }
@@ -2274,6 +2647,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       badge.className += "bg-amber-950/90 text-amber-300 border-amber-500/50";
       dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping";
       text.textContent = "SSE: RECONNECTING";
+    } else if (status === "CONNECTING") {
+      badge.className += "bg-cyan-950/90 text-cyan-300 border-cyan-500/50";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse";
+      text.textContent = "SSE: CONNECTING";
+    } else if (status === "OFFLINE") {
+      badge.className += "bg-amber-950/80 text-amber-300 border-amber-500/40";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-amber-500";
+      text.textContent = "OFFLINE (CACHED)";
     } else {
       badge.className += "bg-slate-900 text-slate-400 border-slate-700/60";
       dot.className = "w-1.5 h-1.5 rounded-full bg-slate-500";
@@ -2300,6 +2681,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     setTimeout(() => { if (toast.parentNode) toast.remove(); }, 12000);
   }
 
+  // Helper to re-render spatial layers on map after data updates
+  async function refreshSpatialDataAndMap() {
+    try {
+      await loadAlertoraSpatialData();
+      if (state.map) renderRealSpatialForecast(state.map);
+      if (state.fullscreenMap) renderRealSpatialForecast(state.fullscreenMap);
+    } catch (err) {
+      console.error("[Spatial] Error refreshing spatial forecast from live stream:", err);
+    }
+  }
+
+  // Routine update throttling timer & window
+  let sseRoutineThrottleTimer = null;
+  const SSE_THROTTLE_WINDOW_MS = 1000;
+
+  function scheduleThrottledMapRefresh() {
+    if (sseRoutineThrottleTimer) return; // Coalesce rapid bursts
+    sseRoutineThrottleTimer = setTimeout(() => {
+      sseRoutineThrottleTimer = null;
+      console.log("[ALERTORA SSE] Executing coalesced spatial map & forecast refresh...");
+      refreshSpatialDataAndMap();
+    }, SSE_THROTTLE_WINDOW_MS);
+  }
+
   function setupRealTimeSSE() {
     if (!window.alertoraAPI) return;
 
@@ -2321,15 +2726,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       },
       onForecastUpdated: (data) => {
         console.log("[ALERTORA SSE] Convective forecast updated event received:", data);
-        loadJuly29DataAndRenderMap();
+        scheduleThrottledMapRefresh();
       },
       onRiskZonesUpdated: (data) => {
         console.log("[ALERTORA SSE] Risk zones updated event received:", data);
-        loadJuly29DataAndRenderMap();
+        scheduleThrottledMapRefresh();
       },
       onStormTrajectoryUpdated: (data) => {
         console.log("[ALERTORA SSE] Storm trajectory updated event received:", data);
-        loadJuly29DataAndRenderMap();
+        scheduleThrottledMapRefresh();
       },
       onAlertCreated: (alertData) => {
         console.log("[ALERTORA SSE] Real-time emergency alert dispatched:", alertData);
@@ -2350,6 +2755,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             renderAlertsView();
           }
         }
+
+        // Critical alerts immediately bypass throttle window
+        if (alertData.severity === "CRITICAL" || alertData.severity === "HIGH") {
+          if (sseRoutineThrottleTimer) {
+            clearTimeout(sseRoutineThrottleTimer);
+            sseRoutineThrottleTimer = null;
+          }
+          refreshSpatialDataAndMap();
+        }
+
         showRealTimeAlertToast(alertData);
       },
       onSystemStatusUpdated: (data) => {
@@ -2910,14 +3325,117 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
+  // ==============================================================================
+  // PWA SERVICE WORKER & OFFLINE EMERGENCY ARCHITECTURE
+  // ==============================================================================
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" })
+        .then((reg) => {
+          console.log("[ALERTORA SW] Service worker registered successfully. Scope:", reg.scope);
+        })
+        .catch((err) => {
+          console.warn("[ALERTORA SW] Service worker registration failed:", err);
+        });
+    });
+  }
+
+  function updateOnlineOfflineStatus() {
+    const banner = document.getElementById("offline-status-banner");
+    const isOnline = navigator.onLine;
+
+    if (!isOnline) {
+      console.warn("[ALERTORA Network] Device transitioned to OFFLINE mode.");
+      if (banner) banner.classList.remove("hidden");
+      updateSSEStatusBadge("OFFLINE");
+    } else {
+      console.log("[ALERTORA Network] Device transitioned back ONLINE.");
+      if (banner) banner.classList.add("hidden");
+      if (window.alertoraAPI) {
+        window.alertoraAPI.reconnectSSE();
+      }
+    }
+  }
+
+  window.addEventListener("online", updateOnlineOfflineStatus);
+  window.addEventListener("offline", updateOnlineOfflineStatus);
+  if (!navigator.onLine) {
+    const banner = document.getElementById("offline-status-banner");
+    if (banner) banner.classList.remove("hidden");
+    updateSSEStatusBadge("OFFLINE");
+  }
+
+  // ==============================================================================
+  // DEEP LINKING & URL HASH ROUTING
+  // ==============================================================================
+  function handleUrlHashRouting() {
+    const hash = window.location.hash;
+    if (!hash) return false;
+
+    if (hash.startsWith("#map")) {
+      switchView("map");
+      const queryIdx = hash.indexOf("?");
+      if (queryIdx !== -1) {
+        const queryStr = hash.substring(queryIdx + 1);
+        const params = new URLSearchParams(queryStr);
+        const lat = parseFloat(params.get("lat"));
+        const lng = parseFloat(params.get("lng"));
+        const shelterId = params.get("shelterId");
+
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          const shelter = ALERTORA_DATA.shelters ? ALERTORA_DATA.shelters.find(s => s.id === shelterId) : null;
+          setTimeout(() => {
+            if (state.map) {
+              state.map.flyTo([lat, lng], 14, { animate: true, duration: 1.0 });
+              if (shelter) {
+                if (state.shelterMarker) state.map.removeLayer(state.shelterMarker);
+                const shelterIcon = L.divIcon({
+                  className: "custom-shelter-marker-icon",
+                  html: `<div class="relative flex items-center justify-center">
+                          <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-cyan-400 opacity-75"></span>
+                          <div style="background-color:#06b6d4; width:28px; height:28px; border-radius:50%; border:3px solid white; box-shadow:0 0 15px #06b6d4" class="relative flex items-center justify-center text-xs font-bold text-black">🏢</div>
+                         </div>`,
+                  iconSize: [28, 28],
+                  iconAnchor: [14, 14]
+                });
+                state.shelterMarker = L.marker([lat, lng], { icon: shelterIcon }).addTo(state.map);
+                state.shelterMarker.bindPopup(`
+                  <div class="font-mono text-xs p-1">
+                    <div class="font-bold text-cyan-400 text-sm mb-1">${shelter.name}</div>
+                    <div class="text-emerald-400 font-bold mb-1">✓ VERIFIED EOC SHELTER SITE (${shelter.status})</div>
+                    <div><b>Capacity:</b> ${shelter.capacity}</div>
+                    <div><b>Distance:</b> ${shelter.distance}</div>
+                    <div class="mt-1 text-gray-300 text-[11px]"><b>Facilities:</b> ${shelter.facilities}</div>
+                  </div>
+                `, { maxWidth: 300 }).openPopup();
+              }
+            }
+          }, 300);
+        }
+      }
+      return true;
+    } else {
+      const cleanHash = hash.replace("#", "");
+      if (views[cleanHash]) {
+        switchView(cleanHash);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  window.addEventListener("hashchange", handleUrlHashRouting);
+
   // Initialize Location Weather Analysis & Dynamic Hazard Updates
   setupLocationAnalysis();
 
   // Initialize Real-Time SSE
   setupRealTimeSSE();
 
-  // Set default view
-  switchView("dashboard");
+  // Route by URL hash if present, otherwise default to dashboard
+  if (!handleUrlHashRouting()) {
+    switchView("dashboard");
+  }
 });
 
 
